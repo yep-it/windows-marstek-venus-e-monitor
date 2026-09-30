@@ -60,7 +60,7 @@ Protocol: **Marstek Device Open API Rev 3.1**, which is JSON-RPC-style over **UD
 | `BLE.GetStatus` | ❌ timeout | not used by the app |
 | `Bat.GetStatus` | ✅ | `soc`, `charg_flag`, `dischrg_flag`, `bat_temp`, `bat_capacity` (Wh stored), `rated_capacity` |
 | `ES.GetStatus` | ✅ | `bat_soc`, `bat_cap`, `pv_power`, `ongrid_power`, `offgrid_power`, `total_grid_output_energy`, `total_grid_input_energy`, `total_load_energy`. **No `bat_power` field**, although the spec lists one |
-| `ES.GetMode` | ✅ | `mode: "Manual"` at probe time; `ongrid_power`, `offgrid_power`, `bat_soc` (no CT fields outside Auto/AI) |
+| `ES.GetMode` | ✅ | `mode: "Manual"`, although the Marstek app shows UPS (see V4); `ongrid_power`, `offgrid_power`, `bat_soc`. **Not used by the app** |
 | `EM.GetStatus` | ✅ | `ct_state: 0` (no CT meter connected) |
 
 **Constraints learned (community reports + spec):**
@@ -83,7 +83,7 @@ These are isolated in configuration and normalization code so that answering the
 | V1 | Which field carries battery charge/discharge power, and with which sign? (`ongrid_power`? `offgrid_power`?) | Record while charging and while discharging | Setting `advanced.power_sign`, default `+ = charging`; direction also inferred from SOC trend |
 | V2 | Units of `total_grid_input_energy` / `total_grid_output_energy` (Wh vs 0.01 kWh vs 0.1 Wh) | Compare with totals in the Marstek app | Setting `advanced.counter_unit`, default `Wh`; Energy tab footer shows "unit check pending" |
 | V3 | How does a grid outage appear in the data? | Switch off grid supply to the battery for 1–2 min while recording | "Grid lost/restored" and "Backup time left" notifications **off and marked experimental**; the Now tab's grid line shows "unknown" |
-| V4 | Does `ES.GetMode` report `"UPS"` when the battery is in UPS mode? (It reported `"Manual"` at probe time.) | Owner confirms the mode set in the Marstek app | Mode badge shows whatever the battery reports; "Mode differs from expected" is on with expected = UPS |
+| V4 | ~~Does `ES.GetMode` report `"UPS"` in UPS mode?~~ **Answered 2026-10-01: no.** The Marstek app shows **UPS** (charge power 1000 W), but the API reports `"mode": "Manual"` (re-checked). | n/a | **Decision:** the app does not rely on the mode at all. It does not poll `ES.GetMode`, does not show the mode, and has no mode-related notifications. The UPS "Charge Power" setting is not exposed by any `Get*` method, so it cannot be displayed |
 | V5 | Is the backup load visible (`offgrid_power`) so that "time left" can be computed? | Outage test (V3) | "Time left" hidden when not computable |
 
 A **"Record raw data"** option (Advanced) writes every raw response to `logs/raw-YYYYMMDD.jsonl`. This supports
@@ -129,7 +129,7 @@ and normalization have no Qt, network or disk dependencies, so they can be unit-
 **Data flow per poll cycle:**
 
 ```
-poller → client (Bat.GetStatus, ES.GetStatus, ES.GetMode [+ Wifi every 10th, GetDevice hourly])
+poller → client (Bat.GetStatus, ES.GetStatus [+ Wifi every 10th, GetDevice hourly])
        → Snapshot (normalized) → storage.samples
        → sessions.update() → storage.sessions
        → energy counter reading → storage.counters
@@ -141,7 +141,8 @@ poller → client (Bat.GetStatus, ES.GetStatus, ES.GetMode [+ Wifi every 10th, G
 
 ### 6.1 API client (`api/client.py`)
 
-- **Allowlist:** `Marstek.GetDevice`, `Wifi.GetStatus`, `Bat.GetStatus`, `ES.GetStatus`, `ES.GetMode`, `EM.GetStatus`.
+- **Allowlist:** `Marstek.GetDevice`, `Wifi.GetStatus`, `Bat.GetStatus`, `ES.GetStatus`, `EM.GetStatus`.
+  (`ES.GetMode` is read-only but deliberately left out, see V4.)
   Any other method raises `ForbiddenMethodError` **before** anything is sent.
 - The socket binds to `(<LAN interface IP>, <device port>)`, with `SO_BROADCAST` for discovery.
 - **Request IDs** increase monotonically. A response is accepted only if `id` matches and it contains `result` or `error`.
@@ -157,7 +158,7 @@ poller → client (Bat.GetStatus, ES.GetStatus, ES.GetMode [+ Wifi every 10th, G
 - `ts_utc`
 - `soc_pct`, `stored_wh`, `rated_wh`, `temp_c`
 - `power_w` (+ = charging, after V1 mapping), `ongrid_w`, `offgrid_w`
-- `mode`, `charge_allowed`, `discharge_allowed`
+- `charge_allowed`, `discharge_allowed`
 - `counter_in_wh`, `counter_out_wh` (after V2 unit mapping)
 - `rssi_dbm`
 - `fw_version`, `ip`
@@ -256,7 +257,6 @@ margin (default 2 % / 2 °C).
 | Battery not responding / back online | after 3 polls | critical | ✓ | ✓ (repeat 60 min) |
 | Charging / discharging blocked (`charg_flag`/`dischrg_flag` false) | on | critical | ✓ | ✓ (repeat 60 min) |
 | Temperature above / below | 45 °C / 5 °C | critical | ✓ | ✓ |
-| Mode differs from expected | expected = UPS | normal | ✓ | – |
 | Firmware version changed | on | normal | ✓ | – |
 | Monitor started / stopped | on | normal | – | ✓ (Telegram only) |
 
@@ -282,7 +282,7 @@ margin (default 2 % / 2 °C).
   - **Listening:** `getUpdates` long polling (timeout 50 s) runs only when "Answer /marstek" is enabled. Only
     messages whose `from.id == user_id` are answered; others are ignored and logged. `setMyCommands` registers
     `/marstek`.
-  - **`/marstek` reply:** SOC, stored kWh, power and direction, grid state, mode, time to full/left, last update time.
+  - **`/marstek` reply:** SOC, stored kWh, power and direction, grid state, time to full/left, last update time.
   - **Detect chat ID:** calls `getUpdates` once and takes the chat id of the latest message.
   - **Monitor started / stopped:** sent on startup and on a clean exit (best-effort during Windows shutdown).
 
@@ -308,7 +308,7 @@ there. The example below shows only the SOC rules.
   "telegram": {"enabled": false, "bot_token": "", "chat_id": "", "user_id": "", "answer_command": true},
   "advanced": {"power_sign": "plus_is_charging", "counter_unit": "Wh", "rearm_pct": 2, "rearm_c": 2,
                "reserve_soc_pct": 12, "samples_retention_days": 30, "log_level": "INFO",
-               "record_raw": false, "expected_mode": "UPS"}
+               "record_raw": false}
 }
 ```
 
@@ -337,31 +337,18 @@ The mockups were reviewed in the brainstorming companion and live under `.superp
 
 - **Title:** "Marstek Venus E — Monitor"
 - **Tab row:** Now · Energy · Live · Sessions · Events
-- **Mode badge:** a colored pill at the top-right:
-
-  | Mode | Color |
-  |---|---|
-  | UPS | green `#2ea043` |
-  | AUTO | blue `#1f6feb` |
-  | AI | purple `#8957e5` |
-  | MANUAL | amber `#9e6a03` |
-  | PASSIVE | pink `#bf4b8a` |
-  | UNKNOWN | grey `#57606a` |
-
-  Its tooltip shows the mode and since when.
+- **The operating mode is not shown anywhere** (see §4, V4).
 
 **Now:**
 
 - **Problem banners** at the top, shown **only when something is wrong**:
   - red: backup at risk (discharging blocked, offline, temperature critical)
   - orange: grid outage / needs attention
-
-  Mode mismatch is **not** a banner; it is only a notification.
 - **Grid line:** "● Grid connected" / "⚡ outage since …" / "unknown" (until V3).
 - **Hero:** big SOC %, state + power (e.g. "↓ Charging · 1 450 W"), stored/rated kWh, time to full **or**
   (during an outage) **"≈ time left at this load"** in the second-largest text, and a progress bar.
 - **Current session card**, e.g. "Charging since 13:10 · 41% → 87% · 1 h 22 min · 2.3 kWh".
-- **Collapsed "Device details":** mode, charge/discharge allowed, temperature, Wi-Fi RSSI, firmware.
+- **Collapsed "Device details":** charge/discharge allowed, temperature, Wi-Fi RSSI, firmware.
 - **Footer:** model · IP · "Updated hh:mm:ss (n s ago)".
 
 **Energy:** lifetime cards, then a charged vs discharged bar chart with Day / Month / Year and ◀ ▶ navigation.
@@ -392,7 +379,7 @@ Sidebar: **General · Notifications · Telegram · Appearance · Advanced**. But
 - **General:** language, start with Windows, battery IP:port + **Rediscover**, poll interval (min 60 s with a warning).
 - **Appearance:** font size slider 100–200 % with a **live preview**, theme (Follow Windows / Light / Dark).
 - **Advanced** (collapsed): power sign, counter unit, re-arm margins, reserve SOC, samples retention, log level,
-  record raw data, expected mode, open data folder.
+  record raw data, open data folder.
 
 ### 7.4 Theme & scaling
 
