@@ -331,7 +331,7 @@ The mockups were reviewed in the brainstorming companion and live under `.superp
 - **Tooltip** (≤127 characters) always starts with the name, e.g.
   `Marstek Venus E · 87% · ↓ Charging 1450 W · Grid OK · 14:32`
 - **Left click:** open or focus the status window.
-- **Right-click menu:** Open monitor · Settings · Exit.
+- **Right-click menu:** Open monitor · Settings · Exit. Exit stops everything, see §10.1.
 
 ### 7.2 Status window
 
@@ -432,6 +432,28 @@ Sidebar: **General · Notifications · Telegram · Appearance · Advanced**. But
 - **Autostart:** an HKCU `Run` value `MarstekMonitor` pointing to the exe. It is only written when the setting is enabled
   and removed when disabled.
 - **Data folder:** `%APPDATA%\MarstekMonitor\` (settings.json, history.db, logs\).
+
+### 10.1 Exit and restart
+
+- **Closing a window** (status or settings) only hides it. The app keeps running in the tray.
+- **Tray menu → Exit** fully stops the app. It:
+  1. stops the poller thread;
+  2. sends "Monitor stopped" to Telegram (if enabled, waiting at most 3 s);
+  3. cancels the Telegram long poll;
+  4. closes the database;
+  5. releases UDP port 30000 and the single-instance mutex;
+  6. removes the tray icon;
+  7. ends the process.
+
+  If a thread does not stop within **5 s**, the process is terminated anyway, so no `MarstekMonitor.exe` stays behind
+  in Task Manager.
+- **Starting again:** run `MarstekMonitor.exe` from a **Start menu shortcut**. The app creates the shortcut on first
+  run in `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Marstek Monitor.lnk`, and Settings → General has
+  "Remove Start menu shortcut". Double-clicking the exe in its folder also works, and so does Windows autostart if enabled.
+- **Starting while already running:** the new instance does not start a second copy. It brings the running
+  instance's status window to the front and exits.
+- Test: an automated test starts the app with a fake battery, triggers Exit, and asserts that the process ends
+  within 6 s and that port 30000 can be bound again afterwards.
 - **Development:** `.venv` in the repo, `python -m marstek_monitor`.
 
 **Dependencies:**
