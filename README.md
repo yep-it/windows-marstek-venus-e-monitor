@@ -65,3 +65,8 @@ The result is `dist\MarstekMonitor\MarstekMonitor.exe` (one folder, about 100 MB
 
 Some values still need a read-only check on the real battery (power sign, counter units,
 how an outage looks). See `docs/verification-checklist.md`.
+
+## License
+
+MIT, see `LICENSE`. The release zip also contains the licenses of the bundled Qt/PySide6 (LGPL-3.0)
+and Python, listed in `THIRD-PARTY-NOTICES.txt`.
