@@ -1,0 +1,7 @@
+{
+  "Marstek.GetDevice": {"id": 1, "src": "VenusE 3.0-0123456789ab", "result": {"device": "VenusE 3.0", "ver": 144, "ble_mac": "0123456789ab", "wifi_mac": "a1b2c3d4e5f6", "wifi_name": "HomeWiFi", "ip": "192.168.1.20"}},
+  "Wifi.GetStatus": {"id": 2, "src": "VenusE 3.0-0123456789ab", "result": {"id": 0, "wifi_mac": "a1b2c3d4e5f6", "ssid": "HomeWiFi", "rssi": -49, "sta_ip": "192.168.1.20", "sta_gate": "192.168.1.1", "sta_mask": "255.255.255.0", "sta_dns": "192.168.1.1"}},
+  "Bat.GetStatus": {"id": 4, "src": "VenusE 3.0-0123456789ab", "result": {"id": 0, "soc": 100, "charg_flag": true, "dischrg_flag": true, "bat_temp": 24.0, "bat_capacity": 5120.0, "rated_capacity": 5120.0}},
+  "ES.GetStatus": {"id": 5, "src": "VenusE 3.0-0123456789ab", "result": {"id": 0, "bat_soc": 100, "bat_cap": 5120, "pv_power": 0, "ongrid_power": 0, "offgrid_power": 0, "total_pv_energy": 0, "total_grid_output_energy": 3329, "total_grid_input_energy": 9196, "total_load_energy": 0}},
+  "EM.GetStatus": {"id": 7, "src": "VenusE 3.0-0123456789ab", "result": {"id": 0, "ct_state": 0, "a_power": 0, "b_power": 0, "c_power": 0, "total_power": 0, "input_energy": 0, "output_energy": 0}}
+}
