@@ -78,3 +78,26 @@ def test_test_button_emits_rule(qtbot):
     with qtbot.waitSignal(win.test_notification) as blocker:
         row.test_button.click()
     assert blocker.args[0] == "soc_reached" and blocker.args[1]["pct"] == 100
+
+
+def test_detect_fills_chat_and_user_id(qtbot):
+    win = make(qtbot)
+    win.set_detected("987654321", "987654321")
+    assert win.telegram.chat.text() == "987654321" and win.telegram.user.text() == "987654321"
+
+
+def test_missing_user_id_warning(qtbot):
+    data = settings_mod.defaults()
+    data["telegram"].update(enabled=True, answer_command=True, user_id="")
+    win = make(qtbot, data)
+    assert not win.telegram.user_warning.isHidden()
+    win.telegram.user.setText("42")
+    assert win.telegram.user_warning.isHidden()
+    win.telegram.user.setText("")
+    win.telegram.answer.setChecked(False)
+    assert win.telegram.user_warning.isHidden()
+
+
+def test_telegram_page_explains_setup_and_command(qtbot):
+    page = make(qtbot).telegram
+    assert "Detect" in page.steps.text() and "/marstek" in page.command_info.text()

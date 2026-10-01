@@ -2,7 +2,7 @@ import time
 
 import pytest
 
-from marstek_monitor.notify.telegram import TelegramApi, TelegramService, detect_chat_id
+from marstek_monitor.notify.telegram import TelegramApi, TelegramService, detect_ids
 from tests.fakes.fake_telegram import FakeTelegram
 
 ERROR_500 = {"ok": False, "error_code": 500, "description": "Internal Server Error"}
@@ -125,12 +125,12 @@ def test_marstek_command_only_from_owner(fake):
     assert fake.calls("setMyCommands")[0]["commands"][0]["command"] == "marstek"
 
 
-def test_detect_chat_id(fake):
+def test_detect_ids_returns_chat_and_user(fake):
     api = TelegramApi("TOKEN", base_url=fake.url)
-    assert detect_chat_id(api) is None
-    fake.updates = [{"update_id": 5, "message": {"chat": {"id": 111}}},
-                    {"update_id": 6, "message": {"chat": {"id": 222}}}]
-    assert detect_chat_id(api) == "222"
+    assert detect_ids(api) is None
+    fake.updates = [{"update_id": 5, "message": {"chat": {"id": 111}, "from": {"id": 7}}},
+                    {"update_id": 6, "message": {"chat": {"id": 222}, "from": {"id": 42}}}]
+    assert detect_ids(api) == ("222", "42")
 
 
 def test_invalid_token_stops_the_listener_after_one_report(fake):

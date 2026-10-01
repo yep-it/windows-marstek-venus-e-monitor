@@ -220,7 +220,6 @@
   "settings.tg_user": "Your user ID",
   "settings.tg_answer": "Answer /marstek (only to your user ID)",
   "settings.tg_test": "Send test message",
-  "settings.tg_hint": "Detect: send any message to your bot, then click Detect.",
   "settings.tg_status_ok": "Test message sent ✓",
   "settings.tg_status_failed": "Failed: {error}",
   "settings.tg_detect_none": "No messages found — send a message to your bot first.",
@@ -252,5 +251,8 @@
   "tile.firmware": "Firmware",
   "tile.allowed": "✓ allowed",
   "tile.blocked": "✕ blocked",
-  "now.settings_button": "⚙ Settings"
+  "now.settings_button": "⚙ Settings",
+  "settings.tg_steps": "Setup: 1) In Telegram, open your bot and send it any message (for example “hi”). 2) Click Detect: it fills in Chat ID and Your user ID. 3) Click Save.",
+  "settings.tg_command_info": "Command /marstek: send it to your bot to get the current charge level, power, grid state and the time of the last reading. Only your user ID gets an answer. It works while this PC is on and Marstek Monitor is running.",
+  "settings.tg_user_missing": "Your user ID is empty, so /marstek will not be answered. Click Detect (in a private chat it is the same number as the Chat ID)."
 }

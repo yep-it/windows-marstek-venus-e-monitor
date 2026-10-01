@@ -70,12 +70,14 @@ class TelegramApi:
         self._call("setMyCommands", {"commands": [{"command": c, "description": d} for c, d in commands]})
 
 
-def detect_chat_id(api: TelegramApi) -> str | None:
-    """Chat ID of the latest message sent to the bot (used by Settings → Detect)."""
+def detect_ids(api: TelegramApi) -> tuple[str, str] | None:
+    """(chat ID, sender's user ID) of the latest message sent to the bot (Settings → Detect)."""
     for update in reversed(api.get_updates(None, 0)):
-        chat = (update.get("message") or {}).get("chat") or {}
+        message = update.get("message") or {}
+        chat = message.get("chat") or {}
         if "id" in chat:
-            return str(chat["id"])
+            sender = (message.get("from") or {}).get("id", chat["id"])
+            return str(chat["id"]), str(sender)
     return None
 
 

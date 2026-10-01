@@ -21,7 +21,7 @@ from .core.snapshot import NormalizeConfig
 from .core.storage import Storage
 from .logging_setup import RawRecorder, setup_logging
 from .notify.desktop import DesktopNotifier
-from .notify.telegram import TelegramApi, TelegramError, TelegramService, detect_chat_id
+from .notify.telegram import TelegramApi, TelegramError, TelegramService, detect_ids
 from .platform import autostart, shortcut
 from .present import render_event, telegram_status
 from .ui import theme
@@ -56,8 +56,13 @@ def telegram_config_problem(tg: dict) -> str | None:
 
 
 def telegram_notice(settings: dict) -> str:
-    problem = telegram_config_problem(settings["telegram"])
-    return i18n.tr(problem) if problem else ""
+    tg = settings["telegram"]
+    problem = telegram_config_problem(tg)
+    if problem:
+        return i18n.tr(problem)
+    if tg["enabled"] and tg["answer_command"] and not tg["user_id"]:
+        return i18n.tr("settings.tg_user_missing")
+    return ""
 
 
 def keep_live_device(new: dict, original: dict, live: dict) -> None:
@@ -92,7 +97,7 @@ class Bridge(QObject):
     problem = Signal(str, object)
     command = Signal()
     settings_status = Signal(str)
-    chat_detected = Signal(str)
+    chat_detected = Signal(str, str)
 
 
 class App(QObject):
@@ -326,7 +331,8 @@ class App(QObject):
 
         def work() -> None:
             try:
-                self.bridge.chat_detected.emit(detect_chat_id(TelegramApi(token)) or "")
+                ids = detect_ids(TelegramApi(token))
+                self.bridge.chat_detected.emit(*(ids or ("", "")))
             except TelegramError as exc:
                 self.bridge.settings_status.emit(i18n.tr("settings.tg_status_failed",
                                                          error=exc.description or exc.status))
@@ -353,11 +359,11 @@ class App(QObject):
         if self.settings_win is not None:
             self.settings_win.set_telegram_status(text)
 
-    def _on_chat_detected(self, chat_id: str) -> None:
+    def _on_chat_detected(self, chat_id: str, user_id: str) -> None:
         if self.settings_win is None:
             return
         if chat_id:
-            self.settings_win.set_chat_id(chat_id)
+            self.settings_win.set_detected(chat_id, user_id)
             self.settings_win.set_telegram_status(i18n.tr("settings.tg_detected"))
         else:
             self.settings_win.set_telegram_status(i18n.tr("settings.tg_detect_none"))

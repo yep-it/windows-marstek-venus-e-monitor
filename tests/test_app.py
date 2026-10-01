@@ -73,3 +73,12 @@ def test_saving_settings_keeps_a_rediscovered_ip():
     edited["device"].update(ip="192.168.1.99", ble_mac="0123456789ab")  # user typed a new IP
     keep_live_device(edited, original, live)
     assert edited["device"]["ip"] == "192.168.1.99"
+
+
+def test_telegram_notice_for_missing_user_id():
+    i18n.set_language("en")
+    cfg = settings_mod.defaults()
+    cfg["telegram"].update(enabled=True, bot_token="1:a", chat_id="5", user_id="", answer_command=True)
+    assert "user ID" in telegram_notice(cfg)
+    cfg["telegram"]["user_id"] = "5"
+    assert telegram_notice(cfg) == ""

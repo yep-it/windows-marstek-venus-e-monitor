@@ -336,14 +336,24 @@ class TelegramPage(QWidget):
         test = QPushButton(tr("settings.tg_test"))
         test.clicked.connect(lambda: window.send_test.emit(self.values()))
         self.status = label("", "muted", 0.9, wrap=True)
+        self.user_warning = label(tr("settings.tg_user_missing"), "banner-orange", 0.9, wrap=True)
+        self.steps = label(tr("settings.tg_steps"), None, 0.95, wrap=True)
+        self.command_info = label(tr("settings.tg_command_info"), "muted", 0.95, wrap=True)
+        self.user.textChanged.connect(lambda _text: self._update_warning())
+        self.answer.toggled.connect(lambda _on: self._update_warning())
+        form.addRow("", self.steps)
         form.addRow("", self.enabled)
         form.addRow(tr("settings.tg_token"), token_row)
         form.addRow(tr("settings.tg_chat"), chat_row)
         form.addRow(tr("settings.tg_user"), self.user)
         form.addRow("", self.answer)
+        form.addRow("", self.user_warning)
         form.addRow("", test)
         form.addRow("", self.status)
-        form.addRow("", label(tr("settings.tg_hint"), "muted", 0.85, wrap=True))
+        form.addRow("", self.command_info)
+
+    def _update_warning(self) -> None:
+        self.user_warning.setVisible(self.answer.isChecked() and not self.user.text().strip())
 
     def values(self) -> dict:
         return {"enabled": self.enabled.isChecked(), "bot_token": self.token.text().strip(),
@@ -357,6 +367,7 @@ class TelegramPage(QWidget):
         self.chat.setText(tg["chat_id"])
         self.user.setText(tg["user_id"])
         self.answer.setChecked(tg["answer_command"])
+        self._update_warning()
 
     def collect(self, d: dict) -> None:
         d["telegram"].update(self.values())
@@ -524,5 +535,6 @@ class SettingsWindow(QWidget):
     def set_telegram_status(self, text: str) -> None:
         self.telegram.status.setText(text)
 
-    def set_chat_id(self, chat_id: str) -> None:
+    def set_detected(self, chat_id: str, user_id: str) -> None:
         self.telegram.chat.setText(chat_id)
+        self.telegram.user.setText(user_id)
