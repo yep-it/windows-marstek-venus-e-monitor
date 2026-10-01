@@ -79,3 +79,11 @@ def test_defaults_are_independent_copies():
     a = settings.defaults()
     a["notifications"]["soc_below"][0]["pct"] = 99
     assert settings.defaults()["notifications"]["soc_below"][0]["pct"] == 40
+
+
+def test_old_default_power_sign_is_migrated_once():
+    old_file = {"schema": 1, "advanced": {"power_sign": "plus_is_charging"}}
+    assert settings.validate(old_file)["advanced"]["power_sign"] == "minus_is_charging"
+    chosen_after_migration = {"schema": 2, "advanced": {"power_sign": "plus_is_charging"}}
+    assert settings.validate(chosen_after_migration)["advanced"]["power_sign"] == "plus_is_charging"
+    assert settings.defaults()["advanced"]["power_sign"] == "minus_is_charging"

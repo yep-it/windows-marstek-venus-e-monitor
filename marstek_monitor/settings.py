@@ -15,7 +15,7 @@ from typing import Any, Callable
 
 log = logging.getLogger(__name__)
 
-SCHEMA = 1
+SCHEMA = 2
 MIN_POLL_SECONDS = 60
 MAX_SOC_LEVELS = 3
 
@@ -48,7 +48,7 @@ DEFAULTS: dict[str, Any] = {
         "monitor": {"enabled": True, "telegram": True},
     },
     "telegram": {"enabled": False, "bot_token": "", "chat_id": "", "user_id": "", "answer_command": True},
-    "advanced": {"power_sign": "plus_is_charging", "counter_unit": "Wh", "counters_verified": False,
+    "advanced": {"power_sign": "minus_is_charging", "counter_unit": "Wh", "counters_verified": False,
                  "outage_detection": False, "rearm_pct": 2, "rearm_c": 2, "reserve_soc_pct": 12,
                  "samples_retention_days": 30, "log_level": "INFO", "record_raw": False},
 }
@@ -188,8 +188,20 @@ def defaults() -> dict:
     return copy.deepcopy(DEFAULTS)
 
 
+def _migrate(data: dict) -> dict:
+    """Schema 1 -> 2: the power sign default was a guess; the device showed that negative means charging.
+    A schema-1 file still holding the old default gets the verified value; later explicit choices are kept."""
+    schema = data.get("schema", 1)
+    advanced = data.get("advanced")
+    if (isinstance(schema, int) and schema < 2 and isinstance(advanced, dict)
+            and advanced.get("power_sign") == "plus_is_charging"):
+        data = copy.deepcopy(data)
+        data["advanced"]["power_sign"] = "minus_is_charging"
+    return data
+
+
 def validate(data: Any) -> dict:
-    result = _merge(DEFAULTS, data if isinstance(data, dict) else {}, "")
+    result = _merge(DEFAULTS, _migrate(data) if isinstance(data, dict) else {}, "")
     result["schema"] = SCHEMA
     return result
 

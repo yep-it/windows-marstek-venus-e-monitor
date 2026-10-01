@@ -33,15 +33,22 @@ def test_probe_fixture_normalizes():
     assert s.fw_version == 144 and s.ip == "192.168.1.20"
 
 
+def test_negative_grid_side_power_means_charging_by_default():
+    # Real reading 2026-10-01 15:03: grid reconnected, battery charging at its 1000 W UPS charge power,
+    # charge counter rising, while ongrid_power reads -996 W and the backup socket draws 71 W.
+    data = raw(ES_GetStatus={"ongrid_power": -996, "offgrid_power": 71})
+    assert normalize(0, data, CFG).power_w == 996
+
+
 def test_power_sign_can_be_inverted():
     data = raw(ES_GetStatus={"ongrid_power": 800})
-    assert normalize(0, data, CFG).power_w == 800
-    assert normalize(0, data, NormalizeConfig(power_sign="minus_is_charging")).power_w == -800
+    assert normalize(0, data, CFG).power_w == -800
+    assert normalize(0, data, NormalizeConfig(power_sign="plus_is_charging")).power_w == 800
 
 
 def test_bat_power_is_preferred_over_ongrid():
     data = raw(ES_GetStatus={"ongrid_power": 800, "bat_power": -300})
-    assert normalize(0, data, CFG).power_w == -300
+    assert normalize(0, data, NormalizeConfig(power_sign="plus_is_charging")).power_w == -300
 
 
 def test_counter_units():
@@ -91,7 +98,7 @@ def test_backup_output_counts_as_supplying():
 
 def test_grid_exchange_still_uses_the_grid_side_power():
     data = raw(ES_GetStatus={"ongrid_power": 800, "offgrid_power": 0})
-    assert normalize(0, data, CFG).power_w == 800
+    assert normalize(0, data, CFG).power_w == -800
 
 
 def test_small_backup_load_below_the_idle_band_is_ignored():

@@ -11,7 +11,8 @@ GRID_IDLE_W = 5.0     # grid-side power this small means "no grid exchange"
 
 @dataclass(frozen=True)
 class NormalizeConfig:
-    power_sign: str = "plus_is_charging"   # spec V1: which sign of the power field means charging
+    # spec V1, verified 2026-10-01: ongrid_power is negative while the battery charges from the grid
+    power_sign: str = "minus_is_charging"
     counter_unit: str = "Wh"               # spec V2: unit of the lifetime energy counters
 
 
