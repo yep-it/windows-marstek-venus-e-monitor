@@ -31,12 +31,12 @@ def state(**kw):
 
 
 def test_tile():
-    assert present.tile(state()) == ("87", "charging")
-    assert present.tile(state(power_w=-800.0)) == ("87", "discharging")
-    assert present.tile(state(power_w=0.0)) == ("87", "idle")
-    assert present.tile(state(online=False)) == (None, "offline")
-    assert present.tile(LiveState()) == ("--", "idle")
-    assert present.tile(state(error_key="sys.port_in_use")) == ("!", "red")
+    assert present.tile(state()) == ("charging", 87)
+    assert present.tile(state(power_w=-800.0)) == ("normal", 87)
+    assert present.tile(state(power_w=0.0)) == ("normal", 87)
+    assert present.tile(state(online=False)) == ("offline", None)
+    assert present.tile(LiveState()) == ("unknown", None)
+    assert present.tile(state(error_key="sys.port_in_use")) == ("error", None)
 
 
 def test_tooltip():

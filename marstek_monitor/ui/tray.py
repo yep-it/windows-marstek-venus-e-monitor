@@ -1,8 +1,12 @@
-"""Tray icon: a rounded tile with the SOC number, colored by state (spec §7.1, option B)."""
+"""Tray icon: a battery that fills with the charge level, with a bolt while charging.
+
+(The owner replaced the spec's option B "number tile" after seeing it at 16 px.)
+The "M" tile is kept for the window and exe icon.
+"""
 from __future__ import annotations
 
 from PySide6.QtCore import QObject, QPointF, QRectF, Qt, Signal
-from PySide6.QtGui import QAction, QColor, QFont, QIcon, QPainter, QPen, QPixmap
+from PySide6.QtGui import QAction, QColor, QFont, QIcon, QPainter, QPen, QPixmap, QPolygonF
 from PySide6.QtWidgets import QMenu, QSystemTrayIcon
 
 from ..core.monitor import LiveState
@@ -41,6 +45,83 @@ def render_tile(label: str | None, color: str, size: int) -> QPixmap:
     return pixmap
 
 
+BOLT_COLOR = "#ffd33d"
+EDGE_COLOR = QColor(20, 20, 20, 210)
+OUTLINE = {"offline": "#9aa0a6", "error": COLORS["red"]}
+# Lightning bolt in a unit box (x, y from the top-left corner).
+BOLT = ((0.62, 0.0), (0.12, 0.56), (0.46, 0.56), (0.34, 1.0), (0.88, 0.40), (0.54, 0.40), (0.74, 0.0))
+
+
+def fill_color(level: int) -> str:
+    if level > 40:
+        return COLORS["charging"]
+    if level >= 20:
+        return COLORS["orange"]
+    return COLORS["red"]
+
+
+def render_battery(kind: str, level: int | None, size: int) -> QPixmap:
+    """Upright battery: outline + terminal, filled from the bottom; bolt when charging."""
+    pixmap = QPixmap(size, size)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    p = QPainter(pixmap)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    stroke = max(1.2, size * 0.09)
+    body = QRectF(size * 0.2 + stroke / 2, size * 0.13 + stroke / 2, size * 0.6 - stroke, size * 0.87 - stroke)
+    terminal = QRectF(size * 0.35, 0, size * 0.3, size * 0.13)
+    outline = QColor(OUTLINE.get(kind, "#ffffff"))
+    radius = size * 0.07
+
+    # filling first, so the outline is drawn crisply over its edge
+    if level is not None and kind in ("normal", "charging"):
+        inner = body.adjusted(stroke, stroke, -stroke, -stroke)
+        height = max(1.0, inner.height() * max(0, min(100, level)) / 100)
+        p.fillRect(QRectF(inner.left(), inner.bottom() - height, inner.width(), height), QColor(fill_color(level)))
+
+    for color, width in ((EDGE_COLOR, stroke + 2), (outline, stroke)):  # dark edge keeps it visible on light taskbars
+        pen = QPen(color)
+        pen.setWidthF(width)
+        p.setPen(pen)
+        p.setBrush(Qt.BrushStyle.NoBrush)
+        p.drawRoundedRect(body, radius, radius)
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(EDGE_COLOR)
+    p.drawRect(terminal.adjusted(-1, -1, 1, 0))
+    p.setBrush(outline)
+    p.drawRect(terminal)
+
+    if kind == "charging":
+        box = QRectF(body.left() - body.width() * 0.05, body.top() + body.height() * 0.08,
+                     body.width() * 1.1, body.height() * 0.84)
+        bolt = QPolygonF([QPointF(box.left() + x * box.width(), box.top() + y * box.height()) for x, y in BOLT])
+        edge = QPen(EDGE_COLOR)
+        edge.setWidthF(max(0.8, size * 0.03))
+        p.setPen(edge)
+        p.setBrush(QColor(BOLT_COLOR))
+        p.drawPolygon(bolt)
+    elif kind in ("offline", "error"):
+        pen = QPen(outline)
+        pen.setWidthF(max(1.3, size * 0.09))
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        p.setPen(pen)
+        cx, cy, r = body.center().x(), body.center().y(), body.width() * 0.25
+        if kind == "offline":
+            p.drawLine(QPointF(cx - r, cy - r), QPointF(cx + r, cy + r))
+            p.drawLine(QPointF(cx + r, cy - r), QPointF(cx - r, cy + r))
+        else:
+            p.drawLine(QPointF(cx, cy - body.height() * 0.25), QPointF(cx, cy + body.height() * 0.08))
+            p.drawPoint(QPointF(cx, cy + body.height() * 0.25))
+    p.end()
+    return pixmap
+
+
+def make_battery_icon(kind: str, level: int | None) -> QIcon:
+    icon = QIcon()
+    for size in ICON_SIZES:
+        icon.addPixmap(render_battery(kind, level, size))
+    return icon
+
+
 def make_icon(label: str | None, color: str) -> QIcon:
     icon = QIcon()
     for size in ICON_SIZES:
@@ -55,7 +136,7 @@ class Tray(QObject):
 
     def __init__(self, parent: QObject | None = None):
         super().__init__(parent)
-        self.icon = QSystemTrayIcon(make_icon("--", COLORS["idle"]))
+        self.icon = QSystemTrayIcon(make_battery_icon("unknown", None))
         self.menu = QMenu()
         self._open = QAction(self.menu)
         self._settings = QAction(self.menu)
@@ -70,7 +151,7 @@ class Tray(QObject):
         self.icon.setContextMenu(self.menu)
         self.icon.activated.connect(self._on_activated)
         self.icon.setToolTip(DEVICE_NAME)
-        self._last_tile: tuple[str | None, str] | None = None
+        self._last_tile: tuple[str, int | None] | None = None
         self.retranslate()
 
     def retranslate(self) -> None:
@@ -91,7 +172,6 @@ class Tray(QObject):
     def update_state(self, state: LiveState, now: float) -> None:
         current = tile(state)
         if current != self._last_tile:
-            label, color_key = current
-            self.icon.setIcon(make_icon(label, COLORS[color_key]))
+            self.icon.setIcon(make_battery_icon(*current))
             self._last_tile = current
         self.icon.setToolTip(tooltip(state, now))
