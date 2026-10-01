@@ -1,0 +1,136 @@
+import time
+
+import pytest
+
+from marstek_monitor import i18n, present, settings as settings_mod
+from marstek_monitor.api.client import DeviceInfo
+from marstek_monitor.core.events import Event
+from marstek_monitor.core.monitor import LiveState
+from marstek_monitor.core.sessions import FLAG_STARTED_BEFORE_APP, Session
+from marstek_monitor.core.snapshot import Snapshot
+
+NOW = time.time()
+DEVICE = DeviceInfo("VenusE 3.0", 144, "0123456789ab", "a1b2c3d4e5f6", "192.168.1.20")
+
+
+@pytest.fixture(autouse=True)
+def english():
+    i18n.set_language("en")
+    yield
+    i18n.set_language("en")
+
+
+def state(**kw):
+    snap_kw = {k: kw.pop(k) for k in list(kw) if k in ("soc_pct", "power_w", "charge_allowed", "discharge_allowed", "temp_c")}
+    s = Snapshot(ts=NOW, responded=True, stored_wh=4450.0, rated_wh=5120.0, ip="192.168.1.20", rssi_dbm=-49,
+                 fw_version=144, **{"soc_pct": 87, "power_w": 1450.0, "charge_allowed": True,
+                                    "discharge_allowed": True, "temp_c": 24.0, **snap_kw})
+    base = dict(snapshot=s, online=True, device=DEVICE, last_update_ts=NOW - 12.4, minutes_to_full=25.0)
+    base.update(kw)
+    return LiveState(**base)
+
+
+def test_tile():
+    assert present.tile(state()) == ("87", "charging")
+    assert present.tile(state(power_w=-800.0)) == ("87", "discharging")
+    assert present.tile(state(power_w=0.0)) == ("87", "idle")
+    assert present.tile(state(online=False)) == (None, "offline")
+    assert present.tile(LiveState()) == ("--", "idle")
+    assert present.tile(state(error_key="sys.port_in_use")) == ("!", "red")
+
+
+def test_tooltip():
+    tip = present.tooltip(state(grid_state="ok"), NOW)
+    assert tip.startswith("Marstek Venus E")
+    assert "87%" in tip and "1 450 W" in tip and "Grid OK" in tip
+    assert len(tip) <= present.TOOLTIP_MAX
+    assert present.tooltip(state(online=False), NOW).startswith("Marstek Venus E · offline")
+
+
+def test_tooltip_limit_in_ukrainian():
+    i18n.set_language("uk")
+    for st in (state(grid_state="lost", power_w=-2500.0), state(error_key="sys.firewall_hint"), state(online=False)):
+        tip = present.tooltip(st, NOW)
+        assert tip.startswith("Marstek Venus E") and len(tip) <= present.TOOLTIP_MAX
+
+
+def test_state_and_energy_lines():
+    assert present.state_line(state()) == ("↓ Charging · 1 450 W", "charging")
+    assert present.state_line(state(online=False))[1] == "red"
+    assert present.energy_line(state()) == "4.5 of 5.1 kWh · full in ≈ 25 min"
+    assert present.time_left_line(state(minutes_left=190.0)) == "≈ 3 h 10 min left at this load"
+    assert present.time_left_line(state()) == ""
+
+
+def test_grid_line():
+    assert present.grid_line(state(grid_state="ok"), NOW) == ("● Grid connected", "charging")
+    text, color = present.grid_line(state(grid_state="lost", grid_since=NOW - 3600), NOW)
+    assert "1 h 0 min" in text and color == "discharging"
+    assert present.grid_line(state(), NOW)[0] == "Grid state unknown"
+
+
+def test_banners():
+    cfg = settings_mod.defaults()
+    assert present.banners(state(), cfg, NOW) == []
+    levels = [lvl for lvl, _ in present.banners(state(discharge_allowed=False, temp_c=50.0), cfg, NOW)]
+    assert levels == ["red", "red"]
+    assert present.banners(state(online=False), cfg, NOW)[0][0] == "red"
+    outage = present.banners(state(grid_state="lost", grid_since=NOW - 60), cfg, NOW)
+    assert outage[0][0] == "orange" and "Grid outage" in outage[0][1]
+
+
+def test_details_and_footer():
+    assert present.details_line(state()) == "Charge ✓ · Discharge ✓ · 24 °C · Wi-Fi -49 dBm · fw 144"
+    left, right = present.footer(state(), NOW)
+    assert left == "VenusE 3.0 · 192.168.1.20" and "(12 s ago)" in right
+
+
+def test_session_texts():
+    s = Session(kind="charge", start_ts=NOW - 3600, start_soc=41, end_ts=NOW, end_soc=87,
+                energy_wh=2300, avg_power_w=2300)
+    assert present.session_summary(s).endswith("41% → 87% · 1 h 0 min · 2.3 kWh")
+    assert present.session_title(s) == "↓ Charging · other"
+    assert present.session_quality(s) == ("✓ complete", False)
+    assert present.session_detail(s) == "avg 2.30 kW"
+    partial = Session(kind="charge", start_ts=NOW - 600, start_soc=55, end_ts=NOW, end_soc=100,
+                      energy_wh=500, avg_power_w=3000, flags={FLAG_STARTED_BEFORE_APP})
+    text = present.session_summary(partial)
+    assert text.startswith("≤ ") and "≤ 55%" in text and "≥ 10 min" in text and "≥ 0.5 kWh" in text
+    assert present.session_quality(partial)[1] is True
+
+
+def test_current_session_line():
+    s = Session(kind="discharge", start_ts=NOW - 600, start_soc=100, last_ts=NOW, last_soc=90, counter_wh=500)
+    assert present.current_session_line(s, NOW).endswith("100% → 90% · 10 min · 0.5 kWh")
+
+
+def test_render_event_formats_durations_and_energy():
+    e = Event(ts=NOW, kind="notification", rule_id="charge_session", priority="normal",
+              title_key="n.charge_session.title", body_key="n.session.body",
+              params={"from_soc": 20, "to_soc": 100, "duration_s": 9600, "energy_wh": 4100})
+    assert present.render_event(e) == ("Charge session finished", "20% → 100% in 2 h 40 min · 4.1 kWh")
+    system = Event(ts=NOW, kind="system", rule_id="system", priority="normal",
+                   title_key="sys.port_in_use", body_key="", params={"port": 30000})
+    assert present.render_event(system) == ("UDP port 30000 is used by another program", "")
+
+
+def test_delivery_text_and_icon():
+    e = Event(ts=NOW, kind="notification", rule_id="offline", priority="critical", title_key="n.offline.title",
+              body_key="n.offline.body", params={}, desktop="held", telegram="retrying")
+    assert present.delivery_text(e) == "🖥 🌙 · ✈ ⟳"
+    assert present.event_icon(e) == "📶"
+
+
+def test_telegram_status():
+    text = present.telegram_status(state(grid_state="ok"), NOW)
+    lines = text.splitlines()
+    assert lines[0] == "🔋 Marstek Venus E — 87% (4.5 of 5.1 kWh)"
+    assert lines[1] == "↓ Charging · 1 450 W · full in ≈ 25 min"
+    assert lines[2] == "● Grid connected"
+    assert lines[3].startswith("Updated ")
+    assert present.telegram_status(LiveState(), NOW).startswith("🔋 Marstek Venus E — no data yet")
+
+
+def test_day_label():
+    assert present.day_label(NOW, NOW).startswith("Today")
+    assert present.day_label(NOW - 86400, NOW).startswith("Yesterday")
