@@ -50,7 +50,8 @@ class Session:
         return "complete"
 
     def energy_so_far(self) -> float:
-        return self.counter_wh if self.counter_wh is not None else self.integrated_wh
+        # The output counter does not count the backup socket; a flat counter means "use power x time".
+        return self.counter_wh if self.counter_wh else self.integrated_wh
 
     def to_dict(self) -> dict:
         data = asdict(self)

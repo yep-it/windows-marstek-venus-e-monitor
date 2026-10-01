@@ -5,6 +5,8 @@ from dataclasses import asdict, dataclass, fields
 from typing import Any
 
 COUNTER_UNITS = {"Wh": 1.0, "0.1Wh": 0.1, "0.01kWh": 10.0, "kWh": 1000.0}
+BACKUP_MIN_W = 30.0   # backup-socket load that counts as the battery supplying power
+GRID_IDLE_W = 5.0     # grid-side power this small means "no grid exchange"
 
 
 @dataclass(frozen=True)
@@ -97,6 +99,11 @@ def normalize(
     power = None
     if raw_power is not None:
         power = raw_power if cfg.power_sign == "plus_is_charging" else -raw_power
+    if (es.get("bat_power") is None and offgrid is not None and offgrid > BACKUP_MIN_W
+            and (ongrid is None or abs(ongrid) <= GRID_IDLE_W)):
+        # Verified 2026-10-01: a load on the backup socket shows only in offgrid_power
+        # (ongrid_power stays 0) while the stored energy falls, so the battery supplies it.
+        power = -offgrid
 
     unit = COUNTER_UNITS.get(cfg.counter_unit, 1.0)
     counter_in = _num(es.get("total_grid_input_energy"))

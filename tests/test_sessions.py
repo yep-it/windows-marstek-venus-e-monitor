@@ -153,3 +153,11 @@ def test_summaries():
 def test_session_dict_roundtrip():
     s = Session(kind="discharge", start_ts=5, start_soc=90, cause="outage", flags={"gap"}, end_ts=50, id=3)
     assert Session.from_dict(s.to_dict()) == s
+
+
+def test_flat_counter_falls_back_to_power_integration():
+    # The output counter does not count the backup socket, so it stays flat while discharging.
+    d = SessionDetector(12)
+    done = feed(d, [snap(0, 99, 0, cout=3329), snap(60, 99, -120, cout=3329), snap(120, 98, -120, cout=3329),
+                    snap(180, 98, -120, cout=3329), snap(240, 98, 0, cout=3329), snap(300, 98, 0, cout=3329)])
+    assert done[0].energy_wh == pytest.approx(4)  # 120 W for 2 minutes

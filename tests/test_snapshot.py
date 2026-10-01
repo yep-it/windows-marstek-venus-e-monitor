@@ -81,3 +81,19 @@ def test_dict_roundtrip():
     s = normalize(5.0, raw(), CFG, fw_version=144, failed=("Wifi.GetStatus",))
     assert snapshot_from_dict(snapshot_to_dict(s)) == s
     assert isinstance(snapshot_from_dict({"ts": 1.0, "responded": True, "extra": 1}), Snapshot)
+
+
+def test_backup_output_counts_as_supplying():
+    # Real reading 2026-10-01 14:54: the PC runs from the battery's backup socket.
+    data = raw(ES_GetStatus={"ongrid_power": 0, "offgrid_power": 115})
+    assert normalize(0, data, CFG).power_w == -115
+
+
+def test_grid_exchange_still_uses_the_grid_side_power():
+    data = raw(ES_GetStatus={"ongrid_power": 800, "offgrid_power": 0})
+    assert normalize(0, data, CFG).power_w == 800
+
+
+def test_small_backup_load_below_the_idle_band_is_ignored():
+    data = raw(ES_GetStatus={"ongrid_power": 0, "offgrid_power": 20})
+    assert normalize(0, data, CFG).power_w == 0
