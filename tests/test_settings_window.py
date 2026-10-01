@@ -1,0 +1,80 @@
+import pytest
+
+from marstek_monitor import i18n, settings as settings_mod
+from marstek_monitor.ui import theme
+from marstek_monitor.ui.settings_window import SettingsWindow
+
+
+@pytest.fixture(autouse=True)
+def setup(qapp):
+    i18n.set_language("en")
+    theme.apply(qapp, "light", 1.0)
+
+
+def make(qtbot, data=None):
+    win = SettingsWindow(data or settings_mod.defaults(), delete_on_close=False)
+    qtbot.addWidget(win)
+    return win
+
+
+def test_defaults_roundtrip(qtbot):
+    data = settings_mod.defaults()
+    assert make(qtbot, data).collect() == settings_mod.validate(data)
+
+
+def test_add_and_remove_soc_levels(qtbot):
+    win = make(qtbot)
+    page = win.notifications
+    page._add_level()
+    assert len(win.collect()["notifications"]["soc_below"]) == 3
+    page._add_level()
+    assert len(win.collect()["notifications"]["soc_below"]) == 3
+    page._remove_level(2)
+    assert len(win.collect()["notifications"]["soc_below"]) == 2
+
+
+def test_edits_are_collected(qtbot):
+    win = make(qtbot)
+    win.general.poll.setValue(120)
+    win.appearance.slider.setValue(150)
+    win.telegram.token.setText(" 123:abc ")
+    win.notifications.q_enabled.setChecked(True)
+    win.notifications.rows_for("soc_below")[0].pct.setValue(35)
+    win.notifications.rows_for("temperature")[0].high.setValue(50)
+    data = win.collect()
+    assert data["general"]["poll_seconds"] == 120
+    assert data["appearance"]["font_scale"] == 1.5
+    assert data["telegram"]["bot_token"] == "123:abc"
+    assert data["quiet_hours"]["enabled"] is True
+    assert data["notifications"]["soc_below"][0]["pct"] == 35
+    assert data["notifications"]["temperature"]["high"] == 50
+
+
+def test_save_emits_validated_settings(qtbot):
+    win = make(qtbot)
+    with qtbot.waitSignal(win.saved) as blocker:
+        win.save_button.click()
+    assert blocker.args[0]["schema"] == settings_mod.SCHEMA
+
+
+def test_experimental_rows_need_outage_detection(qtbot):
+    assert not make(qtbot).notifications.rows_for("grid")[0].enabled.isEnabled()
+    data = settings_mod.defaults()
+    data["advanced"]["outage_detection"] = True
+    assert make(qtbot, data).notifications.rows_for("grid")[0].enabled.isEnabled()
+
+
+def test_notice_banner(qtbot):
+    win = SettingsWindow(settings_mod.defaults(), delete_on_close=False,
+                         notice="UDP port 30000 is used by another program")
+    qtbot.addWidget(win)
+    assert win.notice_label.text() == "UDP port 30000 is used by another program"
+    assert make(qtbot).notice_label is None
+
+
+def test_test_button_emits_rule(qtbot):
+    win = make(qtbot)
+    row = win.notifications.rows_for("soc_reached")[0]
+    with qtbot.waitSignal(win.test_notification) as blocker:
+        row.test_button.click()
+    assert blocker.args[0] == "soc_reached" and blocker.args[1]["pct"] == 100
