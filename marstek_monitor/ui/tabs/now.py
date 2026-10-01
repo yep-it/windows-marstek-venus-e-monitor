@@ -48,7 +48,7 @@ class NowTab(QWidget):
 
         tiles = QHBoxLayout()
         tiles.setSpacing(10)
-        self.tiles = [Card() for _ in range(4)]
+        self.tiles = [Card() for _ in range(5)]
         for tile in self.tiles:
             tiles.addWidget(tile, 1)
         root.addLayout(tiles)

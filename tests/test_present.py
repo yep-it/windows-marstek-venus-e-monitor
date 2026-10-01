@@ -83,12 +83,20 @@ def test_banners():
 def test_detail_tiles():
     cfg = settings_mod.defaults()
     assert present.detail_tiles(state(), cfg) == [
-        ("Temperature", "24 °C", None), ("Charging", "✓ allowed", None),
+        ("Temperature", "24 °C", None), ("Backup load", "0 W", None), ("Charging", "✓ allowed", None),
         ("Discharging", "✓ allowed", None), ("Firmware", "144", None)]
     hot = present.detail_tiles(state(temp_c=50.0, discharge_allowed=False), cfg)
     assert hot[0] == ("Temperature", "50 °C", "red")
-    assert hot[2] == ("Discharging", "✕ blocked", "red")
-    assert [v for _, v, _ in present.detail_tiles(LiveState(), cfg)] == ["—", "—", "—", "—"]
+    assert hot[3] == ("Discharging", "✕ blocked", "red")
+    assert [v for _, v, _ in present.detail_tiles(LiveState(), cfg)] == ["—", "—", "—", "—", "—"]
+
+
+def test_backup_load_tile_shows_the_backup_socket_watts():
+    cfg = settings_mod.defaults()
+    import dataclasses
+    st = state()
+    st.snapshot = dataclasses.replace(st.snapshot, offgrid_w=98.0)
+    assert present.detail_tiles(st, cfg)[1] == ("Backup load", "98 W", None)
 
 
 def test_footer():

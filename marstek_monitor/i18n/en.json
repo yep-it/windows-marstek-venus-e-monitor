@@ -299,5 +299,6 @@
   "help.retention": "How long the per-minute readings (Live tab) are kept. Sessions, energy totals and events are kept separately.",
   "help.log_level": "How much detail the log file contains. Leave it at INFO unless you investigate a problem.",
   "help.record_raw": "Save every raw battery reply to a file in the logs folder. Useful for the verification checks.",
-  "help.open_folder": "Opens the folder with the settings, history and log files."
+  "help.open_folder": "Opens the folder with the settings, history and log files.",
+  "tile.backup_load": "Backup load"
 }

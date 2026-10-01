@@ -156,8 +156,10 @@ def detail_tiles(state: LiveState, settings: dict) -> list[tuple[str, str, str |
     charge, charge_color = allowed(s.charge_allowed if s is not None else None)
     discharge, discharge_color = allowed(s.discharge_allowed if s is not None else None)
     fw = s.fw_version if s is not None and s.fw_version is not None else (state.device.ver if state.device else None)
+    backup = "—" if s is None else fmt_power(s.offgrid_w or 0.0)
     return [
         (tr("tile.temperature"), temp, temp_color),
+        (tr("tile.backup_load"), backup, None),
         (tr("tile.charging"), charge, charge_color),
         (tr("tile.discharging"), discharge, discharge_color),
         (tr("tile.firmware"), "—" if fw is None else str(fw), None),

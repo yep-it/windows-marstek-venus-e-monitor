@@ -46,7 +46,7 @@ def test_device_details_are_always_visible_tiles(qtbot, monitor):
     monitor.handle(poll())
     win = window(qtbot, monitor)
     win.show_tab("now")
-    assert [t.title.text() for t in win.now.tiles] == ["TEMPERATURE", "CHARGING", "DISCHARGING", "FIRMWARE"]
+    assert [t.title.text() for t in win.now.tiles] == ["TEMPERATURE", "BACKUP LOAD", "CHARGING", "DISCHARGING", "FIRMWARE"]
     assert all(t.isVisible() for t in win.now.tiles)
     assert win.now.tiles[0].value.text() == "24 °C"
     assert not hasattr(win.now, "details_button")
