@@ -8,6 +8,7 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QPushButton, QTabWidget, QVBoxLayout, QWidget
 
 from ..i18n import tr
+from . import window_state
 from .tabs.energy import EnergyTab
 from .tabs.events import EventsTab
 from .tabs.live import LiveTab
@@ -24,7 +25,6 @@ class StatusWindow(QWidget):
         self.setWindowTitle(tr("app.window_title"))
         if icon is not None:
             self.setWindowIcon(icon)
-        self.resize(780, 660)
         self.now = NowTab(monitor, get_settings)
         self.energy = EnergyTab(monitor)
         self.live = LiveTab(monitor, get_settings)
@@ -42,6 +42,10 @@ class StatusWindow(QWidget):
         layout = QVBoxLayout(self)
         layout.addWidget(self.tabs)
         self.tabs.currentChanged.connect(lambda _index: self.refresh())
+        window_state.restore(self, "status", *window_state.STATUS_DEFAULT)
+
+    def remember_geometry(self) -> None:
+        window_state.save(self, "status")
 
     def current_tab(self) -> str:
         return self.TAB_KEYS[self.tabs.currentIndex()]
@@ -63,5 +67,6 @@ class StatusWindow(QWidget):
             self.refresh()
 
     def closeEvent(self, event) -> None:
+        self.remember_geometry()
         event.ignore()
         self.hide()

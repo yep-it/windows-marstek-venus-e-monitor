@@ -10,12 +10,13 @@ from PySide6.QtCore import QTime, QUrl, Qt, Signal
 from PySide6.QtGui import QDesktopServices, QFont, QIcon
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QFormLayout, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QListWidget, QPushButton,
-    QScrollArea, QSlider, QSpinBox, QStackedWidget, QTimeEdit, QToolButton, QVBoxLayout, QWidget,
+    QScrollArea, QSizePolicy, QSlider, QSpinBox, QStackedWidget, QTimeEdit, QToolButton, QVBoxLayout, QWidget,
 )
 
 from .. import paths
 from ..i18n import tr
 from ..settings import MAX_SOC_LEVELS, validate
+from . import window_state
 from .theme import base_point_size
 from .widgets import clear_layout, label
 
@@ -86,6 +87,7 @@ class _Row:
             self.high = _spin(20, 80, cfg["high"], " °C")
             self.low = _spin(-20, 20, cfg["low"], " °C")
         self.test_button = QPushButton(tr("settings.test"))
+        self.test_button.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
 
     @staticmethod
     def _check(cfg: dict, key: str) -> QCheckBox | None:
@@ -197,6 +199,7 @@ class NotificationsPage(QWidget):
         root.addLayout(quiet)
         host = QWidget()
         self.grid = QGridLayout(host)
+        self.grid.setColumnStretch(1, 1)
         root.addWidget(host)
         root.addStretch(1)
         self._work: dict = {}
@@ -475,7 +478,6 @@ class SettingsWindow(QWidget):
             self.setWindowIcon(icon)
         if delete_on_close:
             self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        self.resize(940, 660)
         self._data = copy.deepcopy(data)
 
         self.general = GeneralPage(self)
@@ -521,6 +523,11 @@ class SettingsWindow(QWidget):
 
         for page in self.pages:
             page.load(self._data)
+        window_state.restore(self, "settings", *window_state.SETTINGS_DEFAULT)
+
+    def closeEvent(self, event) -> None:
+        window_state.save(self, "settings")
+        super().closeEvent(event)
 
     def collect(self) -> dict:
         data = copy.deepcopy(self._data)

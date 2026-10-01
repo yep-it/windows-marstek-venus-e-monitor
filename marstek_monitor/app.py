@@ -388,6 +388,8 @@ class App(QObject):
             self._stop_telegram(flush_s=3.0)
         else:
             self._stop_telegram()                             # 3. long poll is a daemon thread
+        if self.status.isVisible():
+            self.status.remember_geometry()
         self.monitor.close()                                  # 4. database
         self.instance.release()                               # 5. single-instance mutex
         self.tray.hide()                                      # 6. tray icon
