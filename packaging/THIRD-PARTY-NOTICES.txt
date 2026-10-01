@@ -1,0 +1,20 @@
+Marstek Monitor - third-party software
+======================================
+
+This program includes the following software. Their licenses are in the "licenses" folder.
+
+Qt for Python (PySide6, Shiboken6) and Qt 6
+  Copyright (C) The Qt Company Ltd. and other contributors
+  License: GNU Lesser General Public License v3 (licenses\LGPL-3.0.txt, which supplements
+  licenses\GPL-3.0.txt)
+  Source code: https://code.qt.io/cgit/pyside/pyside-setup.git/ and https://code.qt.io/cgit/qt/
+  The Qt libraries are separate files in the _internal\PySide6 and _internal\shiboken6 folders
+  and can be replaced with other compatible builds.
+
+Python
+  Copyright (C) Python Software Foundation
+  License: PSF License Agreement (licenses\Python-LICENSE.txt)
+
+PyInstaller bootloader
+  License: GPL v2 or later with the PyInstaller bootloader exception, which allows distributing
+  programs built with it under any license. https://pyinstaller.org/en/stable/license.html

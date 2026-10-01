@@ -17,6 +17,17 @@ $required = @(
     "dist\MarstekMonitor\_internal\marstek_monitor\i18n\en.json",
     "dist\MarstekMonitor\_internal\marstek_monitor\i18n\uk.json"
 )
+# license texts next to the exe: the app's own, and those of the bundled Qt and Python
+$out = "dist\MarstekMonitor"
+New-Item -ItemType Directory -Force "$out\licenses" | Out-Null
+Copy-Item LICENSE "$out\LICENSE.txt"
+Copy-Item packaging\THIRD-PARTY-NOTICES.txt $out
+Copy-Item packaging\licenses\*.txt "$out\licenses"
+$pythonHome = & .\.venv\Scripts\python -c "import sys; print(sys.base_prefix)"
+Copy-Item (Join-Path $pythonHome "LICENSE.txt") "$out\licenses\Python-LICENSE.txt"
+$required += @("$out\LICENSE.txt", "$out\THIRD-PARTY-NOTICES.txt", "$out\licenses\LGPL-3.0.txt",
+               "$out\licenses\GPL-3.0.txt", "$out\licenses\Python-LICENSE.txt")
+
 foreach ($file in $required) {
     if (-not (Test-Path $file)) { throw "Build is incomplete: $file is missing. Close any program showing the dist folder and build again." }
 }
