@@ -251,5 +251,6 @@
   "tile.discharging": "Discharging",
   "tile.firmware": "Firmware",
   "tile.allowed": "✓ allowed",
-  "tile.blocked": "✕ blocked"
+  "tile.blocked": "✕ blocked",
+  "now.settings_button": "⚙ Settings"
 }

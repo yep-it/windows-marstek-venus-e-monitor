@@ -3,8 +3,9 @@ from __future__ import annotations
 
 from typing import Callable
 
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QTabWidget, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QPushButton, QTabWidget, QVBoxLayout, QWidget
 
 from ..i18n import tr
 from .tabs.energy import EnergyTab
@@ -16,6 +17,7 @@ from .tabs.sessions import SessionsTab
 
 class StatusWindow(QWidget):
     TAB_KEYS = ("now", "energy", "live", "sessions", "events")
+    settings_requested = Signal()
 
     def __init__(self, monitor, get_settings: Callable[[], dict], icon: QIcon | None = None):
         super().__init__()
@@ -34,6 +36,9 @@ class StatusWindow(QWidget):
         self.tabs.addTab(self.live, tr("tab.live"))
         self.tabs.addTab(self.sessions, tr("tab.sessions"))
         self.tabs.addTab(self.events, tr("tab.events"))
+        self.settings_button = QPushButton(tr("now.settings_button"))
+        self.settings_button.clicked.connect(lambda: self.settings_requested.emit())
+        self.tabs.setCornerWidget(self.settings_button, Qt.Corner.TopRightCorner)
         layout = QVBoxLayout(self)
         layout.addWidget(self.tabs)
         self.tabs.currentChanged.connect(lambda _index: self.refresh())

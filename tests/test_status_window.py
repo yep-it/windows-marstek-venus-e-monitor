@@ -93,3 +93,10 @@ def test_font_scale_enlarges_text(qtbot, qapp, monitor):
     finally:
         theme.apply(qapp, "light", 1.0)
     assert large == pytest.approx(small * 1.5, rel=0.05)
+
+
+def test_settings_button_requests_settings(qtbot, monitor):
+    win = window(qtbot, monitor)
+    with qtbot.waitSignal(win.settings_requested):
+        win.settings_button.click()
+    assert win.settings_button.text() == "⚙ Settings"

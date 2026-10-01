@@ -157,7 +157,9 @@ class App(QObject):
     # -- components ----------------------------------------------------------
 
     def _make_status_window(self) -> StatusWindow:
-        return StatusWindow(self.monitor, lambda: self.settings, icon=self.app_icon)
+        window = StatusWindow(self.monitor, lambda: self.settings, icon=self.app_icon)
+        window.settings_requested.connect(self.open_settings)
+        return window
 
     def _start_poller(self) -> None:
         recorder = RawRecorder() if self.settings["advanced"]["record_raw"] else None

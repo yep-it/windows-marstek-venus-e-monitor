@@ -251,5 +251,6 @@
   "tile.discharging": "Розряджання",
   "tile.firmware": "Прошивка",
   "tile.allowed": "✓ дозволено",
-  "tile.blocked": "✕ заблоковано"
+  "tile.blocked": "✕ заблоковано",
+  "now.settings_button": "⚙ Налаштування"
 }
