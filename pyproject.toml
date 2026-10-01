@@ -1,0 +1,23 @@
+[project]
+name = "marstek-monitor"
+version = "0.1.0"
+description = "Read-only Windows tray monitor for Marstek Venus E batteries (Local API)"
+requires-python = ">=3.13"
+dependencies = ["PySide6>=6.7"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-qt>=4.4", "pyinstaller>=6.10"]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["marstek_monitor*"]
+
+[tool.setuptools.package-data]
+marstek_monitor = ["i18n/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+qt_api = "pyside6"
