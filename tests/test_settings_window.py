@@ -101,3 +101,38 @@ def test_missing_user_id_warning(qtbot):
 def test_telegram_page_explains_setup_and_command(qtbot):
     page = make(qtbot).telegram
     assert "Detect" in page.steps.text() and "/marstek" in page.command_info.text()
+
+
+def _form_rows(page):
+    from PySide6.QtWidgets import QFormLayout
+    form = page.layout()
+    assert isinstance(form, QFormLayout)
+    for row in range(form.rowCount()):
+        label_item = form.itemAt(row, QFormLayout.ItemRole.LabelRole)
+        field_item = form.itemAt(row, QFormLayout.ItemRole.FieldRole)
+        if field_item is None:
+            continue
+        yield (label_item.widget() if label_item else None), (field_item.widget() or field_item.layout())
+
+
+def test_every_setting_has_a_hover_explanation(qtbot):
+    from PySide6.QtWidgets import QCheckBox, QLabel
+    win = make(qtbot)
+    for page in (win.general, win.telegram, win.appearance, win.advanced):
+        for label_widget, field in _form_rows(page):
+            if isinstance(label_widget, QLabel) and label_widget.text():
+                assert label_widget.toolTip(), f"{type(page).__name__}: {label_widget.text()}"
+            if isinstance(field, QCheckBox):
+                assert field.toolTip(), f"{type(page).__name__}: {field.text()}"
+    for row in win.notifications._rows:
+        assert row.name_label.toolTip(), row.rule
+
+
+def test_soc_and_reserve_are_explained_in_plain_words(qtbot):
+    win = make(qtbot)
+    soc_row = win.notifications.rows_for("soc_below")[0]
+    assert soc_row.name_label.text() == "Charge level below"
+    assert "State of Charge" in soc_row.name_label.toolTip()
+    reserve_label = win.advanced.layout().labelForField(win.advanced.reserve)
+    assert reserve_label.text() == "Reserve for “time left”"
+    assert "12%" in reserve_label.toolTip()

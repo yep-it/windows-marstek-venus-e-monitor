@@ -35,6 +35,12 @@ RULE_LABELS = {
     "discharge_session": "rule.discharge_session", "offline": "rule.offline", "blocked": "rule.blocked",
     "temperature": "rule.temperature", "firmware": "rule.firmware", "monitor": "rule.monitor",
 }
+RULE_HELP = {
+    "soc_below": "help.rule.soc_below", "soc_reached": "help.rule.soc_reached", "grid": "help.rule.grid",
+    "backup_left": "help.rule.backup_left", "charge_session": "help.rule.charge_session",
+    "discharge_session": "help.rule.discharge_session", "offline": "help.rule.offline", "blocked": "help.rule.blocked",
+    "temperature": "help.rule.temperature", "firmware": "help.rule.firmware", "monitor": "help.rule.monitor",
+}
 EXPERIMENTAL = {"grid", "backup_left"}
 CRITICAL_RULES = {"grid", "backup_left", "offline", "blocked", "temperature"}
 
@@ -58,6 +64,21 @@ def _combo(options: list[tuple[str, object]], value: object) -> QComboBox:
 def _repeat_combo(value: int) -> QComboBox:
     options = [(tr("settings.repeat_off") if m == 0 else tr("settings.repeat_min", n=m), m) for m in REPEAT_CHOICES]
     return _combo(options, value)
+
+
+def _help(form: QFormLayout, field, key: str) -> None:
+    """Hover explanation on a form row: its label and its field(s)."""
+    tip = tr(key)
+    row_label = form.labelForField(field)
+    if row_label is not None:
+        row_label.setToolTip(tip)
+    if isinstance(field, QWidget):
+        field.setToolTip(tip)
+    else:
+        for i in range(field.count()):
+            widget = field.itemAt(i).widget()
+            if widget is not None:
+                widget.setToolTip(tip)
 
 
 def _select(box: QComboBox, value: object) -> None:
@@ -88,6 +109,12 @@ class _Row:
             self.low = _spin(-20, 20, cfg["low"], " °C")
         self.test_button = QPushButton(tr("settings.test"))
         self.test_button.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
+        self.test_button.setToolTip(tr("help.test"))
+        self.name_label: QLabel | None = None
+        for widget, key in ((self.desktop, "help.col_desktop"), (self.telegram, "help.col_telegram"),
+                            (self.repeat, "help.col_repeat"), (self.priority, "help.priority")):
+            if widget is not None:
+                widget.setToolTip(tr(key))
 
     @staticmethod
     def _check(cfg: dict, key: str) -> QCheckBox | None:
@@ -160,6 +187,10 @@ class GeneralPage(QWidget):
         form.addRow(tr("settings.poll"), self.poll)
         form.addRow("", label(tr("settings.poll_warning"), "muted", 0.9, wrap=True))
         form.addRow(tr("settings.offline_after"), self.offline)
+        for field, key in ((self.language, "help.language"), (self.autostart, "help.autostart"),
+                           (self.shortcut, "help.shortcut"), (battery, "help.battery"), (self.poll, "help.poll"),
+                           (self.offline, "help.offline_after")):
+            _help(form, field, key)
 
     def load(self, d: dict) -> None:
         _select(self.language, d["general"]["language"])
@@ -197,6 +228,9 @@ class NotificationsPage(QWidget):
         quiet.addWidget(self.q_silence)
         quiet.addStretch(1)
         root.addLayout(quiet)
+        for widget, key in ((self.q_enabled, "help.quiet"), (self.q_from, "help.quiet"), (self.q_to, "help.quiet"),
+                            (self.q_bypass, "help.critical_bypass"), (self.q_silence, "help.silence_telegram")):
+            widget.setToolTip(tr(key))
         host = QWidget()
         self.grid = QGridLayout(host)
         self.grid.setColumnStretch(1, 1)
@@ -230,9 +264,13 @@ class NotificationsPage(QWidget):
     def _rebuild(self) -> None:
         clear_layout(self.grid)
         self._rows = []
-        headers = (tr("col.on"), tr("col.notification"), tr("col.threshold"), "🖥", "✈", tr("col.repeat"), "")
-        for column, text in enumerate(headers):
-            self.grid.addWidget(label(text, "card-title", 0.8), 0, column)
+        headers = ((tr("col.on"), ""), (tr("col.notification"), ""), (tr("col.threshold"), "help.col_threshold"),
+                   ("🖥", "help.col_desktop"), ("✈", "help.col_telegram"), (tr("col.repeat"), "help.col_repeat"), ("", ""))
+        for column, (text, help_key) in enumerate(headers):
+            header = label(text, "card-title", 0.8)
+            if help_key:
+                header.setToolTip(tr(help_key))
+            self.grid.addWidget(header, 0, column)
         r = 1
         for group_key, rules in GROUPS:
             self.grid.addWidget(label(tr(group_key).upper(), "card-title", 0.8), r, 0, 1, 7)
@@ -258,7 +296,9 @@ class NotificationsPage(QWidget):
         name = QWidget()
         name_layout = QHBoxLayout(name)
         name_layout.setContentsMargins(0, 0, 0, 0)
-        name_layout.addWidget(QLabel(tr(RULE_LABELS[row.rule])))
+        row.name_label = QLabel(tr(RULE_LABELS[row.rule]))
+        row.name_label.setToolTip(tr(RULE_HELP[row.rule]))
+        name_layout.addWidget(row.name_label)
         if row.rule in EXPERIMENTAL:
             name_layout.addWidget(label(tr("badge.experimental"), "badge-warn", 0.8))
         elif row.rule in CRITICAL_RULES:
@@ -354,6 +394,9 @@ class TelegramPage(QWidget):
         form.addRow("", test)
         form.addRow("", self.status)
         form.addRow("", self.command_info)
+        for field, key in ((self.enabled, "help.tg_enabled"), (token_row, "help.tg_token"), (chat_row, "help.tg_chat"),
+                           (self.user, "help.tg_user"), (self.answer, "help.tg_answer")):
+            _help(form, field, key)
 
     def _update_warning(self) -> None:
         self.user_warning.setVisible(self.answer.isChecked() and not self.user.text().strip())
@@ -395,6 +438,8 @@ class AppearancePage(QWidget):
         form.addRow(tr("settings.font"), row)
         form.addRow(tr("settings.theme"), self.theme)
         form.addRow(tr("settings.preview"), self.preview)
+        for field, key in ((row, "help.font"), (self.theme, "help.theme"), (self.preview, "help.preview")):
+            _help(form, field, key)
 
     def _update_preview(self, value: int) -> None:
         self.value.setText(f"{value} %")
@@ -440,6 +485,13 @@ class AdvancedPage(QWidget):
         form.addRow(tr("settings.log_level"), self.log_level)
         form.addRow("", self.record_raw)
         form.addRow("", folder)
+        for field, key in ((self.power_sign, "help.power_sign"), (self.counter_unit, "help.counter_unit"),
+                           (self.verified, "help.counters_verified"), (self.outage, "help.outage_detection"),
+                           (self.rearm_pct, "help.rearm_pct"), (self.rearm_c, "help.rearm_c"),
+                           (self.reserve, "help.reserve"), (self.retention, "help.retention"),
+                           (self.log_level, "help.log_level"), (self.record_raw, "help.record_raw"),
+                           (folder, "help.open_folder")):
+            _help(form, field, key)
 
     def load(self, d: dict) -> None:
         a = d["advanced"]
