@@ -42,6 +42,25 @@ def test_now_tab_shows_state(qtbot, monitor):
     assert win.now.bar.value() == 87
 
 
+def test_device_details_are_always_visible_tiles(qtbot, monitor):
+    monitor.handle(poll())
+    win = window(qtbot, monitor)
+    win.show_tab("now")
+    assert [t.title.text() for t in win.now.tiles] == ["TEMPERATURE", "CHARGING", "DISCHARGING", "FIRMWARE"]
+    assert all(t.isVisible() for t in win.now.tiles)
+    assert win.now.tiles[0].value.text() == "24 °C"
+    assert not hasattr(win.now, "details_button")
+
+
+def test_idle_and_energy_lines_use_the_main_text_color(qtbot, monitor):
+    monitor.handle(poll(soc=100, power=0.0))
+    win = window(qtbot, monitor)
+    win.now.render()
+    assert win.now.state.text() == "Idle" and "color" not in win.now.state.styleSheet()
+    assert win.now.energy.property("role") is None
+    assert win.now.energy.font().pointSizeF() > win.font().pointSizeF() * 1.2
+
+
 def test_blocked_discharge_shows_a_red_banner(qtbot, monitor):
     monitor.handle(poll(discharge_allowed=False))
     win = window(qtbot, monitor)

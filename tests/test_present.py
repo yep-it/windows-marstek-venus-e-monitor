@@ -57,7 +57,8 @@ def test_tooltip_limit_in_ukrainian():
 def test_state_and_energy_lines():
     assert present.state_line(state()) == ("↓ Charging · 1 450 W", "charging")
     assert present.state_line(state(online=False))[1] == "red"
-    assert present.energy_line(state()) == "4.5 of 5.1 kWh · full in ≈ 25 min"
+    assert present.energy_line(state()) == "4.45 of 5.12 kWh · full in ≈ 25 min"
+    assert present.state_line(state(power_w=0.0)) == ("Idle", "text")
     assert present.time_left_line(state(minutes_left=190.0)) == "≈ 3 h 10 min left at this load"
     assert present.time_left_line(state()) == ""
 
@@ -79,8 +80,18 @@ def test_banners():
     assert outage[0][0] == "orange" and "Grid outage" in outage[0][1]
 
 
-def test_details_and_footer():
-    assert present.details_line(state()) == "Charge ✓ · Discharge ✓ · 24 °C · Wi-Fi -49 dBm · fw 144"
+def test_detail_tiles():
+    cfg = settings_mod.defaults()
+    assert present.detail_tiles(state(), cfg) == [
+        ("Temperature", "24 °C", None), ("Charging", "✓ allowed", None),
+        ("Discharging", "✓ allowed", None), ("Firmware", "144", None)]
+    hot = present.detail_tiles(state(temp_c=50.0, discharge_allowed=False), cfg)
+    assert hot[0] == ("Temperature", "50 °C", "red")
+    assert hot[2] == ("Discharging", "✕ blocked", "red")
+    assert [v for _, v, _ in present.detail_tiles(LiveState(), cfg)] == ["—", "—", "—", "—"]
+
+
+def test_footer():
     left, right = present.footer(state(), NOW)
     assert left == "VenusE 3.0 · 192.168.1.20" and "(12 s ago)" in right
 
@@ -124,7 +135,7 @@ def test_delivery_text_and_icon():
 def test_telegram_status():
     text = present.telegram_status(state(grid_state="ok"), NOW)
     lines = text.splitlines()
-    assert lines[0] == "🔋 Marstek Venus E — 87% (4.5 of 5.1 kWh)"
+    assert lines[0] == "🔋 Marstek Venus E — 87% (4.45 of 5.12 kWh)"
     assert lines[1] == "↓ Charging · 1 450 W · full in ≈ 25 min"
     assert lines[2] == "● Grid connected"
     assert lines[3].startswith("Updated ")

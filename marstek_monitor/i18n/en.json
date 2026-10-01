@@ -9,7 +9,6 @@
   "tab.live": "Live",
   "tab.sessions": "Sessions",
   "tab.events": "Events",
-
   "state.offline": "Battery not responding",
   "state.unknown": "Waiting for data…",
   "state.charging": "↓ Charging · {power}",
@@ -19,7 +18,6 @@
   "now.full": "full",
   "now.current_session": "Current session",
   "now.no_session": "No charging or discharging right now",
-  "now.details": "Device details",
   "est.full": "full in ≈ {time}",
   "est.left": "≈ {time} left at this load",
   "grid.ok": "● Grid connected",
@@ -30,14 +28,9 @@
   "banner.charge_blocked": "Charging is blocked by the battery",
   "banner.temperature": "Battery temperature {temp} °C is outside the safe range",
   "banner.outage": "Grid outage — running on battery since {since} ({duration})",
-  "details.charge": "Charge {v}",
-  "details.discharge": "Discharge {v}",
   "details.temp": "{temp} °C",
-  "details.wifi": "Wi-Fi {rssi} dBm",
-  "details.fw": "fw {fw}",
   "footer.updated": "Updated {time} ({ago} s ago)",
   "footer.waiting": "Waiting for the first reading…",
-
   "sess.current_charge": "Charging since {time} · {from_soc}% → {to_soc}% · {duration} · {energy} kWh",
   "sess.current_discharge": "Supplying since {time} · {from_soc}% → {to_soc}% · {duration} · {energy} kWh",
   "sess.kind.charge": "↓ Charging",
@@ -55,7 +48,6 @@
   "sess.avg_load": "avg load {power}",
   "sess.minimums": "not fully observed — values are minimums",
   "sess.ongoing": "ongoing",
-
   "tip.error": "error — open the monitor",
   "tip.offline": "offline",
   "tip.grid_ok": "Grid OK",
@@ -72,7 +64,6 @@
   "unit.kw": "{v} kW",
   "unit.kwh": "{v} kWh",
   "num.decimal": ".",
-
   "n.soc_below.title": "Battery below {pct}%",
   "n.soc_below.body": "Charge level is {soc}%.",
   "n.soc_reached.title": "Battery reached {pct}%",
@@ -105,7 +96,6 @@
   "n.monitor_stopped.body": "No notifications until the app runs again.",
   "n.test.title": "Test notification",
   "n.test.body": "This is how Marstek Monitor notifications look.",
-
   "sys.port_in_use": "UDP port {port} is used by another program",
   "sys.network_error": "Network error: {error}",
   "sys.firewall_hint": "No reply from the battery. Check its IP address, and that Windows Firewall allows incoming UDP for Marstek Monitor.",
@@ -115,7 +105,6 @@
   "sys.telegram_invalid_token": "Telegram rejected the bot token.",
   "sys.telegram_ignored": "Ignored a Telegram message from user {user}.",
   "sys.telegram_command": "Answered /marstek in Telegram.",
-
   "energy.charged": "Charged (lifetime)",
   "energy.discharged": "Discharged (lifetime)",
   "energy.cycles": "Full cycles",
@@ -133,9 +122,18 @@
   "energy.tip_combined": "Combined bar: the PC was off during this period.",
   "energy.unit_pending": "Counter units are not verified yet (see Advanced settings).",
   "energy.no_data": "No counter readings yet.",
-  "month.1": "Jan", "month.2": "Feb", "month.3": "Mar", "month.4": "Apr", "month.5": "May", "month.6": "Jun",
-  "month.7": "Jul", "month.8": "Aug", "month.9": "Sep", "month.10": "Oct", "month.11": "Nov", "month.12": "Dec",
-
+  "month.1": "Jan",
+  "month.2": "Feb",
+  "month.3": "Mar",
+  "month.4": "Apr",
+  "month.5": "May",
+  "month.6": "Jun",
+  "month.7": "Jul",
+  "month.8": "Aug",
+  "month.9": "Sep",
+  "month.10": "Oct",
+  "month.11": "Nov",
+  "month.12": "Dec",
   "live.1h": "1 h",
   "live.3h": "3 h",
   "live.6h": "6 h",
@@ -144,7 +142,6 @@
   "live.legend": "Blue line: SOC % (left axis) · green: charging · orange: supplying (right axis) · grey: no data",
   "live.no_data": "no data",
   "live.tip": "{time} · SOC {soc}% · {state}",
-
   "sessions.typical": "Typical full charge",
   "sessions.typical_sub": "20 → 100 %, average of the last 5",
   "sessions.longest": "Longest backup",
@@ -159,7 +156,6 @@
   "sessions.pall": "All time",
   "sessions.empty": "No sessions in this period.",
   "sessions.count": "{n} sessions",
-
   "events.all": "All",
   "events.critical": "Critical",
   "events.notifications": "Notifications",
@@ -167,12 +163,10 @@
   "events.search": "Search…",
   "events.empty": "No events.",
   "events.legend": "🖥 desktop · ✈ Telegram · ✓ sent · 🌙 quiet hours · ⟳ retried · ✕ failed",
-
   "badge.critical": "critical",
   "badge.experimental": "experimental",
   "priority.normal": "normal",
   "priority.critical": "critical",
-
   "settings.page.general": "General",
   "settings.page.notifications": "Notifications",
   "settings.page.telegram": "Telegram",
@@ -251,5 +245,11 @@
   "settings.days_suffix": " days",
   "settings.log_level": "Log level",
   "settings.record_raw": "Record raw data",
-  "settings.open_folder": "Open data folder"
+  "settings.open_folder": "Open data folder",
+  "tile.temperature": "Temperature",
+  "tile.charging": "Charging",
+  "tile.discharging": "Discharging",
+  "tile.firmware": "Firmware",
+  "tile.allowed": "✓ allowed",
+  "tile.blocked": "✕ blocked"
 }

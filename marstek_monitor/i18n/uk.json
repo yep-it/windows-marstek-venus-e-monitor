@@ -9,7 +9,6 @@
   "tab.live": "Наживо",
   "tab.sessions": "Сесії",
   "tab.events": "Події",
-
   "state.offline": "Батарея не відповідає",
   "state.unknown": "Очікування даних…",
   "state.charging": "↓ Заряджання · {power}",
@@ -19,7 +18,6 @@
   "now.full": "повна",
   "now.current_session": "Поточна сесія",
   "now.no_session": "Зараз немає заряджання чи розряджання",
-  "now.details": "Деталі пристрою",
   "est.full": "повна через ≈ {time}",
   "est.left": "≈ {time} за поточного навантаження",
   "grid.ok": "● Мережа підключена",
@@ -30,14 +28,9 @@
   "banner.charge_blocked": "Заряджання заблоковане батареєю",
   "banner.temperature": "Температура батареї {temp} °C поза безпечним діапазоном",
   "banner.outage": "Відключення мережі — живлення від батареї з {since} ({duration})",
-  "details.charge": "Заряд {v}",
-  "details.discharge": "Розряд {v}",
   "details.temp": "{temp} °C",
-  "details.wifi": "Wi-Fi {rssi} дБм",
-  "details.fw": "прошивка {fw}",
   "footer.updated": "Оновлено {time} ({ago} с тому)",
   "footer.waiting": "Очікування першого зчитування…",
-
   "sess.current_charge": "Заряджання з {time} · {from_soc}% → {to_soc}% · {duration} · {energy} кВт·год",
   "sess.current_discharge": "Живлення від батареї з {time} · {from_soc}% → {to_soc}% · {duration} · {energy} кВт·год",
   "sess.kind.charge": "↓ Заряджання",
@@ -55,7 +48,6 @@
   "sess.avg_load": "сер. навантаження {power}",
   "sess.minimums": "спостерігалася не повністю — значення мінімальні",
   "sess.ongoing": "триває",
-
   "tip.error": "помилка — відкрийте монітор",
   "tip.offline": "не на зв'язку",
   "tip.grid_ok": "Мережа OK",
@@ -72,7 +64,6 @@
   "unit.kw": "{v} кВт",
   "unit.kwh": "{v} кВт·год",
   "num.decimal": ",",
-
   "n.soc_below.title": "Заряд батареї нижче {pct}%",
   "n.soc_below.body": "Рівень заряду {soc}%.",
   "n.soc_reached.title": "Заряд батареї досяг {pct}%",
@@ -105,7 +96,6 @@
   "n.monitor_stopped.body": "Сповіщень не буде, доки програму не запустять знову.",
   "n.test.title": "Тестове сповіщення",
   "n.test.body": "Так виглядають сповіщення Marstek Monitor.",
-
   "sys.port_in_use": "UDP-порт {port} зайнятий іншою програмою",
   "sys.network_error": "Помилка мережі: {error}",
   "sys.firewall_hint": "Батарея не відповідає. Перевірте її IP-адресу та чи дозволяє брандмауер Windows вхідний UDP для Marstek Monitor.",
@@ -115,7 +105,6 @@
   "sys.telegram_invalid_token": "Telegram відхилив токен бота.",
   "sys.telegram_ignored": "Проігноровано повідомлення Telegram від користувача {user}.",
   "sys.telegram_command": "Відповідь на /marstek у Telegram надіслано.",
-
   "energy.charged": "Заряджено (за весь час)",
   "energy.discharged": "Розряджено (за весь час)",
   "energy.cycles": "Повні цикли",
@@ -133,9 +122,18 @@
   "energy.tip_combined": "Об'єднаний стовпчик: ПК був вимкнений у цей період.",
   "energy.unit_pending": "Одиниці лічильників ще не перевірено (див. розширені налаштування).",
   "energy.no_data": "Показів лічильників ще немає.",
-  "month.1": "Січ", "month.2": "Лют", "month.3": "Бер", "month.4": "Кві", "month.5": "Тра", "month.6": "Чер",
-  "month.7": "Лип", "month.8": "Сер", "month.9": "Вер", "month.10": "Жов", "month.11": "Лис", "month.12": "Гру",
-
+  "month.1": "Січ",
+  "month.2": "Лют",
+  "month.3": "Бер",
+  "month.4": "Кві",
+  "month.5": "Тра",
+  "month.6": "Чер",
+  "month.7": "Лип",
+  "month.8": "Сер",
+  "month.9": "Вер",
+  "month.10": "Жов",
+  "month.11": "Лис",
+  "month.12": "Гру",
   "live.1h": "1 год",
   "live.3h": "3 год",
   "live.6h": "6 год",
@@ -144,7 +142,6 @@
   "live.legend": "Синя лінія: заряд % (ліва вісь) · зелене: заряджання · помаранчеве: живлення від батареї (права вісь) · сіре: немає даних",
   "live.no_data": "немає даних",
   "live.tip": "{time} · заряд {soc}% · {state}",
-
   "sessions.typical": "Типове повне заряджання",
   "sessions.typical_sub": "20 → 100 %, середнє з останніх 5",
   "sessions.longest": "Найдовший резерв",
@@ -159,7 +156,6 @@
   "sessions.pall": "За весь час",
   "sessions.empty": "Немає сесій за цей період.",
   "sessions.count": "Сесій: {n}",
-
   "events.all": "Усі",
   "events.critical": "Критичні",
   "events.notifications": "Сповіщення",
@@ -167,12 +163,10 @@
   "events.search": "Пошук…",
   "events.empty": "Подій немає.",
   "events.legend": "🖥 робочий стіл · ✈ Telegram · ✓ надіслано · 🌙 тихі години · ⟳ повтор · ✕ помилка",
-
   "badge.critical": "критичне",
   "badge.experimental": "експериментальне",
   "priority.normal": "звичайне",
   "priority.critical": "критичне",
-
   "settings.page.general": "Загальні",
   "settings.page.notifications": "Сповіщення",
   "settings.page.telegram": "Telegram",
@@ -251,5 +245,11 @@
   "settings.days_suffix": " днів",
   "settings.log_level": "Рівень журналу",
   "settings.record_raw": "Записувати сирі дані",
-  "settings.open_folder": "Відкрити папку даних"
+  "settings.open_folder": "Відкрити папку даних",
+  "tile.temperature": "Температура",
+  "tile.charging": "Заряджання",
+  "tile.discharging": "Розряджання",
+  "tile.firmware": "Прошивка",
+  "tile.allowed": "✓ дозволено",
+  "tile.blocked": "✕ заблоковано"
 }

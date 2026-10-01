@@ -7,7 +7,7 @@ from marstek_monitor import i18n
 
 PACKAGE = Path(i18n.__file__).parent.parent
 EN = json.loads((Path(i18n.__file__).parent / "en.json").read_text(encoding="utf-8"))
-PREFIXES = ("app.", "tray.", "tab.", "state.", "now.", "est.", "grid.", "banner.", "details.", "footer.",
+PREFIXES = ("app.", "tray.", "tab.", "state.", "now.", "est.", "grid.", "banner.", "details.", "tile.", "footer.",
             "sess.", "sessions.", "tip.", "tg.", "day.", "dur.", "unit.", "num.", "n.", "sys.", "energy.",
             "month.", "live.", "events.", "settings.", "col.", "group.", "rule.", "badge.", "priority.",
             "theme.", "power.")

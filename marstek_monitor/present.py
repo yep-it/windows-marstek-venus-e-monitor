@@ -81,7 +81,7 @@ def state_line(state: LiveState) -> tuple[str, str]:
         return tr("state.charging", power=fmt_power(s.power_w)), "charging"
     if kind == DISCHARGING:
         return tr("state.discharging", power=fmt_power(s.power_w)), "discharging"
-    return tr("state.idle"), "idle"
+    return tr("state.idle"), "text"
 
 
 def energy_line(state: LiveState) -> str:
@@ -90,7 +90,7 @@ def energy_line(state: LiveState) -> str:
         return ""
     parts = []
     if s.stored_wh is not None and s.rated_wh:
-        parts.append(tr("now.stored", stored=fmt_kwh(s.stored_wh), rated=fmt_kwh(s.rated_wh)))
+        parts.append(tr("now.stored", stored=fmt_kwh(s.stored_wh, 2), rated=fmt_kwh(s.rated_wh, 2)))
     if state.minutes_to_full is not None:
         parts.append(tr("est.full", time=fmt_duration(state.minutes_to_full * 60)))
     elif s.soc_pct == 100:
@@ -136,22 +136,30 @@ def banners(state: LiveState, settings: dict, now: float) -> list[tuple[str, str
     return out
 
 
-def details_line(state: LiveState) -> str:
+def detail_tiles(state: LiveState, settings: dict) -> list[tuple[str, str, str | None]]:
+    """(title, value, color key or None) for the Now tab tiles; temperature first."""
     s = state.snapshot
-    if s is None:
-        return "—"
 
-    def mark(value: bool | None) -> str:
-        return "✓" if value else ("✕" if value is False else "?")
+    def allowed(value: bool | None) -> tuple[str, str | None]:
+        if value is None:
+            return "—", None
+        return (tr("tile.allowed"), None) if value else (tr("tile.blocked"), "red")
 
-    parts = [tr("details.charge", v=mark(s.charge_allowed)), tr("details.discharge", v=mark(s.discharge_allowed))]
-    if s.temp_c is not None:
-        parts.append(tr("details.temp", temp=round(s.temp_c)))
-    if s.rssi_dbm is not None:
-        parts.append(tr("details.wifi", rssi=s.rssi_dbm))
-    if s.fw_version is not None:
-        parts.append(tr("details.fw", fw=s.fw_version))
-    return " · ".join(parts)
+    temp, temp_color = "—", None
+    if s is not None and s.temp_c is not None:
+        temp = tr("details.temp", temp=round(s.temp_c))
+        limits = settings["notifications"]["temperature"]
+        if s.temp_c > limits["high"] or s.temp_c < limits["low"]:
+            temp_color = "red"
+    charge, charge_color = allowed(s.charge_allowed if s is not None else None)
+    discharge, discharge_color = allowed(s.discharge_allowed if s is not None else None)
+    fw = s.fw_version if s is not None and s.fw_version is not None else (state.device.ver if state.device else None)
+    return [
+        (tr("tile.temperature"), temp, temp_color),
+        (tr("tile.charging"), charge, charge_color),
+        (tr("tile.discharging"), discharge, discharge_color),
+        (tr("tile.firmware"), "—" if fw is None else str(fw), None),
+    ]
 
 
 def footer(state: LiveState, now: float) -> tuple[str, str]:
@@ -262,7 +270,7 @@ def telegram_status(state: LiveState, now: float) -> str:
     if s is None:
         lines = [tr("tg.no_data")]
     else:
-        lines = [tr("tg.header", soc=_soc(s.soc_pct), stored=fmt_kwh(s.stored_wh), rated=fmt_kwh(s.rated_wh))]
+        lines = [tr("tg.header", soc=_soc(s.soc_pct), stored=fmt_kwh(s.stored_wh, 2), rated=fmt_kwh(s.rated_wh, 2))]
     text, _ = state_line(state)
     extra = ""
     if state.minutes_to_full is not None:

@@ -47,8 +47,8 @@ def _decimal(text: str) -> str:
     return text.replace(".", tr("num.decimal"))
 
 
-def fmt_kwh(wh: float | None) -> str:
-    return "—" if wh is None else _decimal(f"{wh / 1000:.1f}")
+def fmt_kwh(wh: float | None, digits: int = 1) -> str:
+    return "—" if wh is None else _decimal(f"{wh / 1000:.{digits}f}")
 
 
 def fmt_kw(w: float | None) -> str:

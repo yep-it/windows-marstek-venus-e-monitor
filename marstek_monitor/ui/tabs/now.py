@@ -1,15 +1,15 @@
-"""Now tab (spec §7.2): banners, grid line, big SOC, current session, device details."""
+"""Now tab (spec §7.2): banners, grid line, big SOC, detail tiles, current session."""
 from __future__ import annotations
 
 import time
 from typing import Callable
 
-from PySide6.QtCore import Qt, QTimer
-from PySide6.QtWidgets import QHBoxLayout, QProgressBar, QToolButton, QVBoxLayout, QWidget
+from PySide6.QtCore import QTimer
+from PySide6.QtWidgets import QHBoxLayout, QProgressBar, QVBoxLayout, QWidget
 
 from ...i18n import tr
 from ...present import (
-    banners, current_session_line, details_line, energy_line, footer, grid_line, state_line, time_left_line,
+    banners, current_session_line, detail_tiles, energy_line, footer, grid_line, state_line, time_left_line,
 )
 from ..theme import COLORS
 from ..widgets import Card, clear_layout, label
@@ -35,7 +35,7 @@ class NowTab(QWidget):
         column.setSpacing(4)
         self.state = label("", None, 1.6, True)
         self.left = label("", None, 1.35, True)
-        self.energy = label("", "muted")
+        self.energy = label("", None, 1.3)
         self.bar = QProgressBar()
         self.bar.setRange(0, 100)
         self.bar.setTextVisible(False)
@@ -46,20 +46,15 @@ class NowTab(QWidget):
         hero.addLayout(column, 1)
         root.addLayout(hero)
 
+        tiles = QHBoxLayout()
+        tiles.setSpacing(10)
+        self.tiles = [Card() for _ in range(4)]
+        for tile in self.tiles:
+            tiles.addWidget(tile, 1)
+        root.addLayout(tiles)
+
         self.session = Card(tr("now.current_session"))
         root.addWidget(self.session)
-
-        self.details_button = QToolButton()
-        self.details_button.setText(tr("now.details"))
-        self.details_button.setCheckable(True)
-        self.details_button.setAutoRaise(True)
-        self.details_button.setArrowType(Qt.ArrowType.RightArrow)
-        self.details_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-        self.details_button.toggled.connect(self._toggle_details)
-        self.details = label("", "muted", 0.95, wrap=True)
-        self.details.hide()
-        root.addWidget(self.details_button)
-        root.addWidget(self.details)
         root.addStretch(1)
 
         bottom = QHBoxLayout()
@@ -74,10 +69,6 @@ class NowTab(QWidget):
         self._timer.timeout.connect(self.render)
         self._timer.start(1000)
         self.render()
-
-    def _toggle_details(self, on: bool) -> None:
-        self.details.setVisible(on)
-        self.details_button.setArrowType(Qt.ArrowType.DownArrow if on else Qt.ArrowType.RightArrow)
 
     def refresh(self) -> None:
         self.render()
@@ -99,7 +90,7 @@ class NowTab(QWidget):
         self.soc.setText(f"{soc}%" if soc is not None else "--%")
         text, color = state_line(state)
         self.state.setText(text)
-        self.state.setStyleSheet(f"color: {COLORS[color]};")
+        self.state.setStyleSheet(f"color: {COLORS[color]};" if color in COLORS else "")  # "text" = palette color
         left = time_left_line(state)
         self.left.setText(left)
         self.left.setVisible(bool(left))
@@ -107,7 +98,7 @@ class NowTab(QWidget):
         self.bar.setValue(soc or 0)
         self.bar.setStyleSheet(
             "QProgressBar { border: none; border-radius: 7px; background: rgba(128, 128, 128, 0.25); }"
-            f"QProgressBar::chunk {{ border-radius: 7px; background: {COLORS[color]}; }}"
+            f"QProgressBar::chunk {{ border-radius: 7px; background: {COLORS.get(color, COLORS['idle'])}; }}"
         )
 
         session = state.current_session
@@ -118,7 +109,10 @@ class NowTab(QWidget):
             self.session.set(tr("now.no_session"))
             self.session.set_accent(None)
 
-        self.details.setText(details_line(state))
+        for tile, (title, value, tile_color) in zip(self.tiles, detail_tiles(state, self.get_settings())):
+            tile.title.setText(title.upper())
+            tile.set(value)
+            tile.value.setStyleSheet(f"color: {COLORS[tile_color]};" if tile_color else "")
         left_text, right_text = footer(state, now)
         self.footer_left.setText(left_text)
         self.footer_right.setText(right_text)
