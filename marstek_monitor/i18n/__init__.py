@@ -51,6 +51,15 @@ def fmt_kwh(wh: float | None, digits: int = 1) -> str:
     return "—" if wh is None else _decimal(f"{wh / 1000:.{digits}f}")
 
 
+def fmt_energy(wh: float | None) -> str:
+    """Energy with its unit: Wh below 1 kWh (a short backup session is a few Wh), kWh above."""
+    if wh is None:
+        return "—"
+    if round(abs(wh)) < 1000:
+        return tr("unit.wh", v=f"{wh:.0f}")
+    return tr("unit.kwh", v=fmt_kwh(wh))
+
+
 def fmt_kw(w: float | None) -> str:
     return "—" if w is None else tr("unit.kw", v=_decimal(f"{abs(w) / 1000:.2f}"))
 

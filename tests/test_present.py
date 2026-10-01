@@ -114,13 +114,19 @@ def test_session_texts():
     partial = Session(kind="charge", start_ts=NOW - 600, start_soc=55, end_ts=NOW, end_soc=100,
                       energy_wh=500, avg_power_w=3000, flags={FLAG_STARTED_BEFORE_APP})
     text = present.session_summary(partial)
-    assert text.startswith("≤ ") and "≤ 55%" in text and "≥ 10 min" in text and "≥ 0.5 kWh" in text
+    assert text.startswith("≤ ") and "≤ 55%" in text and "≥ 10 min" in text and "≥ 500 Wh" in text
     assert present.session_quality(partial)[1] is True
 
 
 def test_current_session_line():
     s = Session(kind="discharge", start_ts=NOW - 600, start_soc=100, last_ts=NOW, last_soc=90, counter_wh=500)
-    assert present.current_session_line(s, NOW).endswith("100% → 90% · 10 min · 0.5 kWh")
+    assert present.current_session_line(s, NOW).endswith("100% → 90% · 10 min · 500 Wh")
+
+
+def test_small_session_energy_is_shown_in_wh():
+    # Real 2026-10-01: ~85 W for 3 min on backup showed "0.0 kWh".
+    s = Session(kind="discharge", start_ts=NOW - 180, start_soc=99, last_ts=NOW, last_soc=99, integrated_wh=4.3)
+    assert present.current_session_line(s, NOW).endswith("99% → 99% · 3 min · 4 Wh")
 
 
 def test_render_event_formats_durations_and_energy():

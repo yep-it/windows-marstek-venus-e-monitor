@@ -51,6 +51,8 @@ def test_ukrainian():
     assert i18n.tr("tab.now") == "Зараз"
     assert i18n.fmt_duration(125 * 60) == "2 год 5 хв"
     assert i18n.fmt_kwh(4450) == "4,5"
+    assert i18n.fmt_energy(11) == "11 Вт·год"
+    assert i18n.fmt_energy(2300) == "2,3 кВт·год"
 
 
 def test_formatters():
@@ -60,6 +62,11 @@ def test_formatters():
     assert i18n.fmt_duration(59) == "1 min"
     assert i18n.fmt_kwh(4450) == "4.5"
     assert i18n.fmt_kwh(None) == "—"
+    assert i18n.fmt_energy(None) == "—"
+    assert i18n.fmt_energy(4.4) == "4 Wh"
+    assert i18n.fmt_energy(999.4) == "999 Wh"
+    assert i18n.fmt_energy(999.6) == "1.0 kWh"
+    assert i18n.fmt_energy(2300) == "2.3 kWh"
     assert i18n.fmt_power(1450) == "1 450 W"
     assert i18n.fmt_power(-850.4) == "850 W"
     assert i18n.fmt_kw(1700) == "1.70 kW"

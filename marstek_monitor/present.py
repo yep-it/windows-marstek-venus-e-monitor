@@ -9,7 +9,7 @@ from .core.events import Event
 from .core.monitor import LiveState
 from .core.sessions import FLAG_ENDED_WHILE_OFF, FLAG_STARTED_BEFORE_APP, Session
 from .core.snapshot import Snapshot
-from .i18n import fmt_duration, fmt_kw, fmt_kwh, fmt_power, tr
+from .i18n import fmt_duration, fmt_energy, fmt_kw, fmt_kwh, fmt_power, tr
 
 DEVICE_NAME = "Marstek Venus E"
 TOOLTIP_MAX = 127
@@ -203,7 +203,7 @@ def current_session_line(session: Session, now: float) -> str:
     key = "sess.current_charge" if session.kind == "charge" else "sess.current_discharge"
     return tr(key, time=le + hm(session.start_ts), from_soc=_soc(session.start_soc, le),
               to_soc=_soc(session.last_soc), duration=ge + fmt_duration(now - session.start_ts),
-              energy=ge + fmt_kwh(session.energy_so_far()))
+              energy=ge + fmt_energy(session.energy_so_far()))
 
 
 def session_title(session: Session) -> str:
@@ -226,7 +226,7 @@ def session_summary(session: Session) -> str:
     energy = session.energy_wh if session.energy_wh is not None else session.energy_so_far()
     return tr("sess.summary", start=le + hm(session.start_ts), end=hm(end_ts),
               from_soc=_soc(session.start_soc, le), to_soc=_soc(end_soc),
-              duration=ge + fmt_duration(session.duration_s), energy=ge + fmt_kwh(energy))
+              duration=ge + fmt_duration(session.duration_s), energy=ge + fmt_energy(energy))
 
 
 def session_detail(session: Session) -> str:
@@ -248,7 +248,7 @@ def render_event(e: Event) -> tuple[str, str]:
         if key.endswith("_s") and is_number:
             params[key[:-2]] = fmt_duration(value)
         elif key.endswith("_wh") and is_number:
-            params[key[:-3]] = fmt_kwh(value)
+            params[key[:-3]] = fmt_energy(value)
         else:
             params[key] = value
     title = tr(e.title_key, **params)
