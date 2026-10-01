@@ -66,19 +66,19 @@ def render_battery(kind: str, level: int | None, size: int) -> QPixmap:
     pixmap.fill(Qt.GlobalColor.transparent)
     p = QPainter(pixmap)
     p.setRenderHint(QPainter.RenderHint.Antialiasing)
-    stroke = max(1.2, size * 0.09)
-    body = QRectF(size * 0.2 + stroke / 2, size * 0.13 + stroke / 2, size * 0.6 - stroke, size * 0.87 - stroke)
-    terminal = QRectF(size * 0.35, 0, size * 0.3, size * 0.13)
+    stroke = max(1.0, size * 0.06)  # thin outline: most of the icon is the colored fill
+    body = QRectF(size * 0.18 + stroke / 2, size * 0.12 + stroke / 2, size * 0.64 - stroke, size * 0.88 - stroke)
+    terminal = QRectF(size * 0.36, 0, size * 0.28, size * 0.12)
     outline = QColor(OUTLINE.get(kind, "#ffffff"))
     radius = size * 0.07
 
     # filling first, so the outline is drawn crisply over its edge
     if level is not None and kind in ("normal", "charging"):
-        inner = body.adjusted(stroke, stroke, -stroke, -stroke)
+        inner = body.adjusted(stroke * 0.75, stroke * 0.75, -stroke * 0.75, -stroke * 0.75)
         height = max(1.0, inner.height() * max(0, min(100, level)) / 100)
         p.fillRect(QRectF(inner.left(), inner.bottom() - height, inner.width(), height), QColor(fill_color(level)))
 
-    for color, width in ((EDGE_COLOR, stroke + 2), (outline, stroke)):  # dark edge keeps it visible on light taskbars
+    for color, width in ((EDGE_COLOR, stroke + 1), (outline, stroke)):  # dark edge keeps it visible on light taskbars
         pen = QPen(color)
         pen.setWidthF(width)
         p.setPen(pen)
@@ -91,11 +91,12 @@ def render_battery(kind: str, level: int | None, size: int) -> QPixmap:
     p.drawRect(terminal)
 
     if kind == "charging":
-        box = QRectF(body.left() - body.width() * 0.05, body.top() + body.height() * 0.08,
-                     body.width() * 1.1, body.height() * 0.84)
+        # a narrow bolt in the middle, so the fill level stays visible on both sides
+        box = QRectF(body.center().x() - body.width() * 0.25, body.center().y() - body.height() * 0.3,
+                     body.width() * 0.5, body.height() * 0.6)
         bolt = QPolygonF([QPointF(box.left() + x * box.width(), box.top() + y * box.height()) for x, y in BOLT])
         edge = QPen(EDGE_COLOR)
-        edge.setWidthF(max(0.8, size * 0.03))
+        edge.setWidthF(max(0.5, size * 0.018))
         p.setPen(edge)
         p.setBrush(QColor(BOLT_COLOR))
         p.drawPolygon(bolt)

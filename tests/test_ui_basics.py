@@ -83,12 +83,23 @@ def test_battery_fill_follows_the_level(light):
     low = render_battery("normal", 10, 32).toImage()
     assert QColor(full.pixelColor(16, 12)).name() == "#2ea043"   # upper body is filled when full
     assert QColor(low.pixelColor(16, 12)).alpha() == 0          # ...and empty when nearly empty
-    assert QColor(low.pixelColor(16, 26)).name() == "#e5534b"   # red fill at the bottom
+    assert QColor(low.pixelColor(16, 28)).name() == "#e5534b"   # red fill at the bottom
+
+
+def yellowish(pixmap):
+    image = pixmap.toImage()
+    count = 0
+    for x in range(image.width()):
+        for y in range(image.height()):
+            c = image.pixelColor(x, y)
+            if c.alpha() > 200 and c.red() > 200 and c.green() > 150 and c.blue() < 120:
+                count += 1
+    return count
 
 
 def test_charging_shows_a_bolt(light):
-    assert colors_in(render_battery("charging", 50, 32)).get(YELLOW, 0) > 20
-    assert colors_in(render_battery("normal", 50, 32)).get(YELLOW, 0) == 0
+    assert yellowish(render_battery("charging", 50, 32)) > 10
+    assert yellowish(render_battery("normal", 50, 32)) == 0
 
 
 def test_offline_and_error_have_no_fill(light):
@@ -101,3 +112,15 @@ def test_offline_and_error_have_no_fill(light):
 def test_battery_icon_sizes(light):
     sizes = {s.width() for s in make_battery_icon("normal", 50).availableSizes()}
     assert {16, 24, 32} <= sizes
+
+
+def test_bolt_leaves_the_fill_visible_beside_it(light):
+    image = render_battery("charging", 100, 32).toImage()
+    y = 18  # middle of the body
+    assert QColor(image.pixelColor(10, y)).name() == "#2ea043"   # left of the bolt
+    assert QColor(image.pixelColor(22, y)).name() == "#2ea043"   # right of the bolt
+
+
+def test_outline_is_thin_compared_to_the_fill(light):
+    found = colors_in(render_battery("normal", 100, 32))
+    assert found.get("#2ea043", 0) > 2 * found.get("#ffffff", 0)
