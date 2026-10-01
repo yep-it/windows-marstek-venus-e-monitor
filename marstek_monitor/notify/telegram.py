@@ -57,8 +57,13 @@ class TelegramApi:
             raise TelegramError(body.get("error_code"), body.get("description", ""))
         return body.get("result")
 
-    def send_message(self, chat_id, text: str) -> None:
-        self._call("sendMessage", {"chat_id": chat_id, "text": text})
+    def send_message(self, chat_id, text: str, silent: bool = False, html: bool = False) -> None:
+        payload: dict = {"chat_id": chat_id, "text": text}
+        if html:
+            payload["parse_mode"] = "HTML"
+        if silent:
+            payload["disable_notification"] = True  # arrives without a sound on the phone
+        self._call("sendMessage", payload)
 
     def get_updates(self, offset: int | None, timeout_s: int) -> list[dict]:
         payload: dict = {"timeout": timeout_s, "allowed_updates": ["message"]}
@@ -111,8 +116,8 @@ class TelegramService:
         if self._listener is not None:
             self._listener.start()
 
-    def send(self, text: str, event_id: int | None = None) -> None:
-        self._queue.put((text, event_id))
+    def send(self, text: str, event_id: int | None = None, silent: bool = False, html: bool = False) -> None:
+        self._queue.put((text, event_id, silent, html))
 
     def flush(self, timeout: float) -> bool:
         deadline = time.monotonic() + timeout
@@ -131,19 +136,19 @@ class TelegramService:
     def _send_loop(self) -> None:
         while not self._stop.is_set():
             try:
-                text, event_id = self._queue.get(timeout=0.2)
+                text, event_id, silent, html = self._queue.get(timeout=0.2)
             except queue.Empty:
                 continue
             try:
-                self._deliver(text, event_id)
+                self._deliver(text, event_id, silent, html)
             finally:
                 self._queue.task_done()
 
-    def _deliver(self, text: str, event_id: int | None) -> None:
+    def _deliver(self, text: str, event_id: int | None, silent: bool = False, html: bool = False) -> None:
         attempts = 0
         while True:
             try:
-                self.api.send_message(self.chat_id, text)
+                self.api.send_message(self.chat_id, text, silent=silent, html=html)
                 self.on_delivery(event_id, "sent")
                 return
             except TelegramError as exc:

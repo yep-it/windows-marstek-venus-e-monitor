@@ -141,3 +141,14 @@ def test_invalid_token_stops_the_listener_after_one_report(fake):
     assert wait_for(lambda: not svc._listener.is_alive(), timeout=2)
     svc.stop()
     assert rec.problems == [("sys.telegram_invalid_token", {})]
+
+
+def test_silent_and_html_options_reach_the_api(fake):
+    svc, _ = make(fake.url)
+    svc.send("<b>CRITICAL</b>", 1, silent=False, html=True)
+    svc.send("normal", 2, silent=True)
+    assert svc.flush(3)
+    svc.stop()
+    first, second = fake.calls("sendMessage")
+    assert first == {"chat_id": "100", "text": "<b>CRITICAL</b>", "parse_mode": "HTML"}
+    assert second == {"chat_id": "100", "text": "normal", "disable_notification": True}

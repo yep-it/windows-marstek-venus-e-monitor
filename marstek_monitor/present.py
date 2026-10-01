@@ -1,6 +1,7 @@
 """Human-readable text for the UI, the tray tooltip and Telegram (no widgets)."""
 from __future__ import annotations
 
+import html
 from datetime import datetime, timedelta
 
 from .core.estimates import CHARGING, DISCHARGING, direction
@@ -251,6 +252,26 @@ def render_event(e: Event) -> tuple[str, str]:
     title = tr(e.title_key, **params)
     body = tr(e.body_key, **params) if e.body_key else ""
     return title, body
+
+
+CRITICAL_MARK = "🔴"
+NORMAL_MARK = "🔵"
+
+
+def decorated_title(e: Event, title: str) -> str:
+    """Desktop toast title: a red dot for critical, a blue dot for normal notifications."""
+    return f"{CRITICAL_MARK if e.priority == 'critical' else NORMAL_MARK} {title}"
+
+
+def telegram_message(e: Event) -> tuple[str, bool]:
+    """(HTML text, silent). Critical: bold CRITICAL and a sound; normal: delivered silently."""
+    title, body = render_event(e)
+    if e.priority == "critical":
+        head = f"{CRITICAL_MARK} <b>CRITICAL</b> · {html.escape(title)}"
+    else:
+        head = f"{NORMAL_MARK} {html.escape(title)}"
+    lines = [head] + ([html.escape(body)] if body else [])
+    return "\n".join(lines), e.priority != "critical"
 
 
 def delivery_text(e: Event) -> str:

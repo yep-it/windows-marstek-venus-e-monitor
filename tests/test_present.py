@@ -145,3 +145,29 @@ def test_telegram_status():
 def test_day_label():
     assert present.day_label(NOW, NOW).startswith("Today")
     assert present.day_label(NOW - 86400, NOW).startswith("Yesterday")
+
+
+def _event(priority, title_key="n.offline.title", body_key="n.offline.body", params=None):
+    return Event(ts=NOW, kind="notification", rule_id="offline", priority=priority, title_key=title_key,
+                 body_key=body_key, params=params if params is not None else {"polls": 3})
+
+
+def test_desktop_titles_show_priority():
+    assert present.decorated_title(_event("critical"), "Battery not responding") == "🔴 Battery not responding"
+    assert present.decorated_title(_event("normal"), "Battery reached 100%") == "🔵 Battery reached 100%"
+
+
+def test_telegram_message_marks_critical_and_silences_normal():
+    text, silent = present.telegram_message(_event("critical"))
+    assert text.splitlines() == ["🔴 <b>CRITICAL</b> · Battery not responding", "No reply for 3 polls in a row."]
+    assert silent is False
+    text, silent = present.telegram_message(_event("normal", "n.soc_reached.title", "n.soc_reached.body",
+                                                   {"pct": 100, "soc": 100}))
+    assert text.splitlines() == ["🔵 Battery reached 100%", "Charge level is 100%."]
+    assert silent is True
+
+
+def test_telegram_message_escapes_html():
+    e = Event(ts=NOW, kind="system", rule_id="system", priority="normal", title_key="sys.network_error",
+              body_key="", params={"error": "<boom> & co"})
+    assert present.telegram_message(e)[0] == "🔵 Network error: &lt;boom&gt; &amp; co"

@@ -23,7 +23,7 @@ from .logging_setup import RawRecorder, setup_logging
 from .notify.desktop import DesktopNotifier
 from .notify.telegram import TelegramApi, TelegramError, TelegramService, detect_ids
 from .platform import autostart, shortcut
-from .present import render_event, telegram_status
+from .present import decorated_title, render_event, telegram_message, telegram_status
 from .ui import theme
 from .ui.settings_window import SettingsWindow
 from .ui.status_window import StatusWindow
@@ -234,11 +234,12 @@ class App(QObject):
         for e in events:
             title, body = render_event(e)
             if e.desktop == "pending":
-                shown = self.desktop.show(title, body, e.priority == "critical", tab_for(e))
+                shown = self.desktop.show(decorated_title(e, title), body, e.priority == "critical", tab_for(e))
                 self.monitor.record_delivery(e.id, "desktop", "sent" if shown else "failed")
             if e.telegram == "pending":
                 if self.telegram is not None:
-                    self.telegram.send(f"{title}\n{body}".strip(), e.id)
+                    text, silent = telegram_message(e)
+                    self.telegram.send(text, e.id, silent=silent, html=True)
                 else:
                     self.monitor.record_delivery(e.id, "telegram", "failed")
         if events and self.status.isVisible():
@@ -383,8 +384,8 @@ class App(QObject):
         stopped = self.monitor.rules.monitor_event(time.time(), started=False)
         if stopped is not None and self.telegram is not None:  # 2. "Monitor stopped", max 3 s
             [event] = self.monitor.emit([stopped], bypass_quiet=True)
-            title, body = render_event(event)
-            self.telegram.send(f"{title}\n{body}", event.id)
+            text, silent = telegram_message(event)
+            self.telegram.send(text, event.id, silent=silent, html=True)
             self._stop_telegram(flush_s=3.0)
         else:
             self._stop_telegram()                             # 3. long poll is a daemon thread
