@@ -1,16 +1,15 @@
-"""EXPERIMENTAL grid-outage heuristic (spec V3: the real signature is not verified yet).
+"""Grid-outage detection (spec V3, signature verified on the device 2026-10-01).
 
-Heuristic: the grid counts as lost when the battery feeds the off-grid (backup) output
-(offgrid > 30 W) while the grid side carries ~no power (|ongrid| <= 5 W) for two
-consecutive samples; it counts as restored after two samples with |ongrid| > 5 W.
+The grid counts as lost when the battery itself feeds the backup socket: a backup load,
+no grid exchange, and the battery below full (a full battery with the same readings is grid
+passthrough). Two consecutive samples are needed; restored after two samples without that.
+An outage with nothing on the backup socket cannot be told apart from idle.
 Disabled by default via settings `advanced.outage_detection`.
 """
 from __future__ import annotations
 
-from .snapshot import Snapshot
+from .snapshot import Snapshot, battery_full, supplies_backup
 
-OFFGRID_MIN_W = 30.0
-ONGRID_MAX_W = 5.0
 CONFIRM_SAMPLES = 2
 
 
@@ -26,7 +25,7 @@ class OutageDetector:
     def update(self, s: Snapshot) -> str | None:
         if not self.enabled or not s.responded or s.ongrid_w is None:
             return None
-        looks_lost = (s.offgrid_w or 0.0) > OFFGRID_MIN_W and abs(s.ongrid_w) <= ONGRID_MAX_W
+        looks_lost = supplies_backup(s.ongrid_w, s.offgrid_w, battery_full(s.soc_pct, s.stored_wh, s.rated_wh))
         wanted = "lost" if looks_lost else "ok"
         if wanted == self.state:
             self._streak = 0

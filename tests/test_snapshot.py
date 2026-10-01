@@ -92,7 +92,8 @@ def test_dict_roundtrip():
 
 def test_backup_output_counts_as_supplying():
     # Real reading 2026-10-01 14:54: the PC runs from the battery's backup socket.
-    data = raw(ES_GetStatus={"ongrid_power": 0, "offgrid_power": 115})
+    data = raw(Bat_GetStatus={"soc": 99, "bat_capacity": 5089.0},
+               ES_GetStatus={"ongrid_power": 0, "offgrid_power": 115})
     assert normalize(0, data, CFG).power_w == -115
 
 
@@ -103,4 +104,12 @@ def test_grid_exchange_still_uses_the_grid_side_power():
 
 def test_small_backup_load_below_the_idle_band_is_ignored():
     data = raw(ES_GetStatus={"ongrid_power": 0, "offgrid_power": 20})
+    assert normalize(0, data, CFG).power_w == 0
+
+
+def test_full_battery_passthrough_is_not_supplying():
+    # Real readings 15:06-15:23: battery full, grid connected, ~95 W on the backup socket,
+    # ongrid_power 0 and the stored energy stays at 5120 Wh -> the grid feeds the socket, battery idle.
+    data = raw(Bat_GetStatus={"soc": 100, "bat_capacity": 5120.0, "rated_capacity": 5120.0},
+               ES_GetStatus={"ongrid_power": 0, "offgrid_power": 95})
     assert normalize(0, data, CFG).power_w == 0

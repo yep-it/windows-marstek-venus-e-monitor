@@ -64,6 +64,21 @@ def _temp(value: Any) -> float | None:
     return n
 
 
+def battery_full(soc: int | None, stored_wh: float | None, rated_wh: float | None) -> bool:
+    if stored_wh is not None and rated_wh:
+        return stored_wh >= rated_wh
+    return soc is not None and soc >= 100
+
+
+def supplies_backup(ongrid_w: float | None, offgrid_w: float | None, full: bool) -> bool:
+    """True when the battery itself feeds the backup socket (verified 2026-10-01):
+    a backup load with no grid exchange. When the battery is full, the same readings mean the
+    grid passes power straight through to the socket (stored energy stayed at 5120 Wh), so a
+    full battery is not supplying; during a real outage it drops below full within minutes."""
+    return (offgrid_w is not None and offgrid_w > BACKUP_MIN_W
+            and (ongrid_w is None or abs(ongrid_w) <= GRID_IDLE_W) and not full)
+
+
 def _flag(value: Any) -> bool | None:
     if isinstance(value, bool):
         return value
@@ -100,10 +115,7 @@ def normalize(
     power = None
     if raw_power is not None:
         power = raw_power if cfg.power_sign == "plus_is_charging" else -raw_power
-    if (es.get("bat_power") is None and offgrid is not None and offgrid > BACKUP_MIN_W
-            and (ongrid is None or abs(ongrid) <= GRID_IDLE_W)):
-        # Verified 2026-10-01: a load on the backup socket shows only in offgrid_power
-        # (ongrid_power stays 0) while the stored energy falls, so the battery supplies it.
+    if es.get("bat_power") is None and supplies_backup(ongrid, offgrid, battery_full(soc, stored, rated)):
         power = -offgrid
 
     unit = COUNTER_UNITS.get(cfg.counter_unit, 1.0)

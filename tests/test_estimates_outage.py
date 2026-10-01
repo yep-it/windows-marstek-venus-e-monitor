@@ -53,3 +53,24 @@ def test_single_glitch_does_not_trigger():
     assert d.update(snap(ts=60, ongrid=900, offgrid=500)) is None
     assert d.update(snap(ts=120, ongrid=0, offgrid=500)) is None
     assert d.state == "ok"
+
+
+def full(ts, offgrid):
+    return Snapshot(ts=ts, responded=True, soc_pct=100, stored_wh=5120.0, rated_wh=5120.0, ongrid_w=0.0,
+                    offgrid_w=offgrid)
+
+
+def test_full_battery_with_backup_load_is_not_an_outage():
+    d = OutageDetector(enabled=True)
+    assert d.update(full(0, 95)) is None
+    assert d.update(full(60, 95)) is None
+    assert d.state == "ok"
+
+
+def test_outage_is_detected_once_the_battery_drops_below_full():
+    d = OutageDetector(enabled=True)
+    d.update(full(0, 95))
+    below = Snapshot(ts=60, responded=True, soc_pct=99, stored_wh=5115.0, rated_wh=5120.0, ongrid_w=0.0, offgrid_w=95)
+    d.update(below)
+    assert d.update(Snapshot(ts=120, responded=True, soc_pct=99, stored_wh=5110.0, rated_wh=5120.0,
+                             ongrid_w=0.0, offgrid_w=95)) == "lost"
