@@ -10,6 +10,7 @@ from typing import Callable
 from ..api.client import (
     ApiError,
     ApiTimeout,
+    ClientStopped,
     DeviceInfo,
     MarstekClient,
     PortInUseError,
@@ -89,6 +90,19 @@ class Poller:
             self._client = None
 
     def cycle(self) -> PollResult:
+        try:
+            result = self._cycle_once()
+        except ClientStopped:
+            raise
+        except Exception:
+            log.exception("Poll cycle failed")
+            self._failures += 1
+            result = PollResult(ts=self._clock(), snapshot=None, online=self.online, device=self.device)
+        if not self.online:
+            self.close()  # reopen next cycle with a freshly chosen local interface
+        return result
+
+    def _cycle_once(self) -> PollResult:
         now = self._clock()
         gap = None
         if self._last_ts is not None and now - self._last_ts > 3 * self.cfg.poll_seconds:
@@ -158,7 +172,7 @@ class Poller:
         addresses = list(self.cfg.broadcast) if self.cfg.broadcast else broadcast_addresses(client.local_ip)
         try:
             found = client.discover(addresses, wait=self.cfg.discovery_wait_s)
-        except OSError as exc:
+        except (OSError, ApiTimeout) as exc:
             log.warning("Discovery failed: %s", exc)
             return
         match = None

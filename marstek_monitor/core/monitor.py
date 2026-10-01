@@ -20,7 +20,7 @@ from .outage import OutageDetector
 from .poller import PollResult
 from .rules import RuleContext, RulesEngine, route
 from .sessions import Session, SessionDetector
-from .snapshot import Snapshot
+from .snapshot import COUNTER_UNITS, Snapshot
 from .storage import Storage
 
 log = logging.getLogger(__name__)
@@ -69,6 +69,10 @@ class Monitor:
             self.state.current_session = open_session
 
     def apply_settings(self, settings: dict) -> None:
+        old_unit = self.settings["advanced"]["counter_unit"]
+        new_unit = settings["advanced"]["counter_unit"]
+        if old_unit != new_unit:
+            self._rescale_counters(COUNTER_UNITS.get(new_unit, 1.0) / COUNTER_UNITS.get(old_unit, 1.0))
         self.settings = settings
         self.rules.settings = settings
         self.detector.reserve = settings["advanced"]["reserve_soc_pct"]
@@ -78,6 +82,16 @@ class Monitor:
         self.state.counters_verified = settings["advanced"]["counters_verified"]
         self.state.grid_state = self.outage.state
         self.state.grid_since = self.outage.since
+
+    def _rescale_counters(self, factor: float) -> None:
+        """Counters are stored in Wh of the old unit; convert history so no bogus jump appears."""
+        self._db(lambda st: st.rescale_counters(factor))
+        current = self.detector.current
+        if current is not None:
+            if current.last_counter is not None:
+                current.last_counter *= factor
+            if current.counter_wh is not None:
+                current.counter_wh *= factor
 
     def _db(self, fn: Callable[[Storage], Any], default: Any = None) -> Any:
         if self.storage is None:
@@ -123,6 +137,10 @@ class Monitor:
             self._db(lambda st: st.add_sample(s))
             if s.counter_in_wh is not None and s.counter_out_wh is not None:
                 self._db(lambda st: st.add_counter(s.ts, s.counter_in_wh, s.counter_out_wh, force=r.gap is not None))
+            current = self.detector.current
+            if (r.gap is None and current is not None
+                    and s.ts - current.last_ts > 3 * self.settings["general"]["poll_seconds"]):
+                self.detector.mark_gap()  # e.g. a session restored after the app was off
             grid_event = self.outage.update(s)
             if grid_event == "lost":
                 self.outage_marks.append(s.ts)

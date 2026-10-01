@@ -92,3 +92,12 @@ def test_lifetime():
 def test_add_months():
     assert add_months(date(2026, 10, 17), -11) == date(2025, 11, 1)
     assert add_months(date(2026, 12, 1), 1) == date(2027, 1, 1)
+
+
+def test_pc_off_every_night_keeps_separate_day_bars():
+    readings = []
+    for d in range(1, 6):
+        readings += [r(ts(2026, 9, d, 8), d * 1000, 0), r(ts(2026, 9, d, 22), d * 1000 + 500, 0)]
+    result = bars(readings, "day", UTC)
+    assert len(result) == 5 and not any(b.combined for b in result)
+    assert sum(b.charged_wh for b in result) == pytest.approx(readings[-1].in_wh - readings[0].in_wh)

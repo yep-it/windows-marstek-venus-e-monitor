@@ -67,6 +67,10 @@ class Storage:
                                  (since if since is not None else -1e18,))
         return [CounterReading(row["ts"], row["in_wh"], row["out_wh"]) for row in rows]
 
+    def rescale_counters(self, factor: float) -> None:
+        self.conn.execute("UPDATE counters SET in_wh = in_wh * ?, out_wh = out_wh * ?", (factor, factor))
+        self.conn.commit()
+
     def last_counter(self) -> CounterReading | None:
         row = self.conn.execute("SELECT ts, in_wh, out_wh FROM counters ORDER BY ts DESC LIMIT 1").fetchone()
         return CounterReading(row["ts"], row["in_wh"], row["out_wh"]) if row else None

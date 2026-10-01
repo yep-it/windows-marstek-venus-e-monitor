@@ -221,10 +221,10 @@ class MarstekClient:
             data, addr = sock.recvfrom(65535)
         except (socket.timeout, ConnectionResetError):
             return None
-        except OSError:
+        except OSError as exc:
             if self._stop.is_set():
                 raise ClientStopped()
-            raise
+            raise ApiTimeout(f"socket error: {exc}") from exc
         try:
             msg = json.loads(data.decode("utf-8", errors="replace"))
         except ValueError:

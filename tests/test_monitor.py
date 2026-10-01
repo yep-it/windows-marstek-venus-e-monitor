@@ -133,3 +133,26 @@ def test_emit_stores_and_bypasses_quiet_hours(cfg, storage):
     assert e.id is not None and e.desktop == "pending"
     m.record_delivery(e.id, "desktop", "sent")
     assert m.event_list()[0].desktop == "sent"
+
+
+def test_restored_session_after_long_downtime_is_not_complete(cfg, storage):
+    m1 = Monitor(cfg, storage, clock=lambda: NOON)
+    for i, power in enumerate([0, -900, -900]):
+        m1.handle(poll(NOON + i * 60, soc=90 - i, power=power, cout=100 + i * 20))
+    later = NOON + 50_000  # the app was off for ~14 h, the battery is discharging again
+    m2 = Monitor(cfg, storage, clock=lambda: later)
+    for i, power in enumerate([-900, -900, 0, 0]):
+        m2.handle(poll(later + i * 60, soc=60 - i, power=power, cout=500 + i * 20))
+    finished = [s for s in m2.session_list() if s.end_ts is not None]
+    assert len(finished) == 1 and finished[0].quality != "complete"
+
+
+def test_counter_unit_change_rescales_history(cfg, storage):
+    import copy
+    m = Monitor(cfg, storage, clock=lambda: NOON)
+    m.handle(poll(NOON, cin=9196, cout=3329))
+    changed = copy.deepcopy(cfg)
+    changed["advanced"]["counter_unit"] = "0.01kWh"
+    m.apply_settings(changed)
+    reading = m.counter_readings()[0]
+    assert (reading.in_wh, reading.out_wh) == (91960, 33290)

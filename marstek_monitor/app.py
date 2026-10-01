@@ -1,6 +1,7 @@
 """Qt glue (spec §5, §10.1): poller thread → monitor pipeline → tray, windows and notifiers."""
 from __future__ import annotations
 
+import copy
 import json
 import logging
 import os
@@ -52,6 +53,18 @@ def telegram_config_problem(tg: dict) -> str | None:
     if tg["enabled"] and (not tg["bot_token"] or not tg["chat_id"]):
         return "settings.tg_missing"
     return None
+
+
+def telegram_notice(settings: dict) -> str:
+    problem = telegram_config_problem(settings["telegram"])
+    return i18n.tr(problem) if problem else ""
+
+
+def keep_live_device(new: dict, original: dict, live: dict) -> None:
+    """Keep an IP/MAC rediscovered while Settings was open, unless the user edited it."""
+    for key in ("ip", "ble_mac"):
+        if new["device"][key] == original["device"][key]:
+            new["device"][key] = live["device"][key]
 
 
 def apply_device_change(settings: dict, ip: str | None, ble_mac: str | None) -> bool:
@@ -165,6 +178,7 @@ class App(QObject):
         if not tg["enabled"] or problem:
             if problem:
                 log.warning("Telegram is enabled but not configured (%s)", problem)
+                self.monitor.system_event(problem)
             return
         self.telegram = TelegramService(
             TelegramApi(tg["bot_token"]), chat_id=tg["chat_id"], user_id=tg["user_id"],
@@ -251,7 +265,11 @@ class App(QObject):
             return
         state = self.monitor.state
         notice = i18n.tr(state.error_key, **state.error_params) if state.error_key else ""
+        self._settings_opened_with = copy.deepcopy(self.settings)
         win = SettingsWindow(self.settings, icon=self.app_icon, notice=notice)
+        tg_notice = telegram_notice(self.settings)
+        if tg_notice:
+            win.set_telegram_status(tg_notice)
         win.saved.connect(self._on_settings_saved)
         win.rediscover.connect(self._rediscover)
         win.test_notification.connect(self._on_test_notification)
@@ -265,6 +283,7 @@ class App(QObject):
         self.settings_win = None
 
     def _on_settings_saved(self, new: dict) -> None:
+        keep_live_device(new, self._settings_opened_with, self.settings)
         old = self.settings
         self.settings = new
         settings_mod.save(paths.settings_path(), new)

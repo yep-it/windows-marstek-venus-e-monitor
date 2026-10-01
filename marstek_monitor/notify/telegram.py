@@ -177,6 +177,7 @@ class TelegramService:
             except TelegramError as exc:
                 if exc.status == 401:
                     self.on_problem("sys.telegram_invalid_token", {})
+                    return  # retrying cannot help; Settings shows the problem
                 if self._stop.wait(5):
                     return
                 continue

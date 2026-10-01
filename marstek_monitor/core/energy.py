@@ -1,17 +1,14 @@
 """Energy per day/month/year from the battery's lifetime counters (spec §6.6, pure logic).
 
 Energy between two counter readings is attributed to the period both readings fall in.
-Readings that straddle a period boundary within COMBINE_GAP_S are split in proportion
-to time. Longer gaps (PC off) merge all periods they span into one combined bar, which
-keeps totals exact while the per-period split is unknown.
+Readings in adjacent periods (e.g. the PC was off overnight) are split in proportion to
+time. Gaps that leave at least one whole period without readings merge all periods they
+span into one combined bar, which keeps totals exact while the per-period split is unknown.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime, time as dtime, timedelta, tzinfo
-
-COMBINE_GAP_S = 3600.0
-
 
 @dataclass(frozen=True)
 class CounterReading:
@@ -89,7 +86,7 @@ def bars(readings: list[CounterReading], period: str, tz: tzinfo | None = None) 
         kb = _key(_local_date(b.ts, tz), period)
         if ka == kb:
             add(ka, din, dout)
-        elif b.ts - a.ts <= COMBINE_GAP_S and _next_key(ka, period) == kb:
+        elif _next_key(ka, period) == kb:  # adjacent periods (e.g. PC off overnight): split by time
             frac = (_start_ts(kb, tz) - a.ts) / (b.ts - a.ts)
             frac = min(1.0, max(0.0, frac))
             add(ka, din * frac, dout * frac)

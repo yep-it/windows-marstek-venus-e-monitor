@@ -120,3 +120,25 @@ def test_stop_interrupts_a_waiting_call(client, battery):
 def test_broadcast_addresses():
     assert broadcast_addresses("192.168.1.10") == ["192.168.1.255", "255.255.255.255"]
     assert broadcast_addresses("127.0.0.1") == ["255.255.255.255"]
+
+
+class _ResettingSocket:
+    """Wraps a real socket; recvfrom fails like WSAENETRESET after a network change."""
+
+    def __init__(self, sock):
+        self._sock = sock
+
+    def sendto(self, data, addr):
+        return self._sock.sendto(data, addr)
+
+    def recvfrom(self, size):
+        raise OSError(10052, "network dropped the connection on reset")
+
+    def close(self):
+        self._sock.close()
+
+
+def test_unexpected_socket_error_becomes_a_timeout(client):
+    client._sock = _ResettingSocket(client._sock)
+    with pytest.raises(ApiTimeout):
+        client.call("127.0.0.1", "Bat.GetStatus")

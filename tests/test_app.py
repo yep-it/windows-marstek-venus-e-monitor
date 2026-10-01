@@ -1,5 +1,8 @@
 from marstek_monitor import settings as settings_mod
-from marstek_monitor.app import apply_device_change, poller_config, poller_key, tab_for, telegram_config_problem
+from marstek_monitor import i18n
+from marstek_monitor.app import (
+    apply_device_change, keep_live_device, poller_config, poller_key, tab_for, telegram_config_problem, telegram_notice,
+)
 from marstek_monitor.core.events import Event
 
 
@@ -47,3 +50,26 @@ def test_tab_for():
     assert tab_for(e("charge_session")) == "sessions"
     assert tab_for(e("system", kind="system")) == "events"
     assert tab_for(e("soc_below")) == "now"
+
+
+def test_telegram_notice_explains_incomplete_setup():
+    i18n.set_language("en")
+    cfg = settings_mod.defaults()
+    assert telegram_notice(cfg) == ""
+    cfg["telegram"]["enabled"] = True
+    assert telegram_notice(cfg) == "Enter the bot token and chat ID first."
+
+
+def test_saving_settings_keeps_a_rediscovered_ip():
+    original = settings_mod.defaults()
+    original["device"].update(ip="192.168.1.20", ble_mac="0123456789ab")
+    live = settings_mod.defaults()
+    live["device"].update(ip="192.168.1.77", ble_mac="0123456789ab")   # rediscovered while the window was open
+    new = settings_mod.defaults()
+    new["device"].update(ip="192.168.1.20", ble_mac="0123456789ab")    # user did not touch the IP field
+    keep_live_device(new, original, live)
+    assert new["device"]["ip"] == "192.168.1.77"
+    edited = settings_mod.defaults()
+    edited["device"].update(ip="192.168.1.99", ble_mac="0123456789ab")  # user typed a new IP
+    keep_live_device(edited, original, live)
+    assert edited["device"]["ip"] == "192.168.1.99"

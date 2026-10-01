@@ -133,9 +133,12 @@ class ScriptedClient:
     """In-memory client: `devices` maps ip -> method results."""
 
     devices: dict[str, dict] = {}
+    created = 0
+    fail_with: Exception | None = None
 
     def __init__(self, **kwargs):
         self.local_ip = kwargs["local_ip"]
+        ScriptedClient.created += 1
 
     def open(self):
         pass
@@ -147,6 +150,8 @@ class ScriptedClient:
         pass
 
     def call(self, ip, method, params=None):
+        if self.fail_with is not None:
+            raise self.fail_with
         if ip not in self.devices:
             raise ApiTimeout(method)
         return self.devices[ip][method]
@@ -187,3 +192,29 @@ def test_thread_emits_results_and_stops_quickly(qtbot, battery):
     assert blocker.args[0].snapshot.soc_pct == 100
     thread.stop()
     assert thread.wait(2000)
+
+
+def _scripted(devices, fail_with=None):
+    ScriptedClient.devices, ScriptedClient.created, ScriptedClient.fail_with = devices, 0, fail_with
+    clock = Clock()
+    cfg = PollerConfig(ip="192.168.1.20", port=30000, ble_mac="0123456789ab", local_ip="192.168.1.10",
+                       query_spacing_s=0, broadcast=("192.168.1.255",))
+    return Poller(cfg, client_factory=ScriptedClient, clock=clock), clock
+
+
+def test_unexpected_error_in_a_cycle_counts_as_a_failure():
+    p, clock = _scripted({"192.168.1.20": FIX}, fail_with=RuntimeError("boom"))
+    flags = []
+    for _ in range(3):
+        flags.append(p.cycle().online)
+        clock.t += 60
+    ScriptedClient.fail_with = None
+    assert flags == [True, True, False]
+
+
+def test_client_is_rebuilt_after_going_offline():
+    p, clock = _scripted({})
+    for _ in range(4):
+        p.cycle()
+        clock.t += 60
+    assert ScriptedClient.created == 2

@@ -131,3 +131,13 @@ def test_detect_chat_id(fake):
     fake.updates = [{"update_id": 5, "message": {"chat": {"id": 111}}},
                     {"update_id": 6, "message": {"chat": {"id": 222}}}]
     assert detect_chat_id(api) == "222"
+
+
+def test_invalid_token_stops_the_listener_after_one_report(fake):
+    for _ in range(5):
+        fake.queue("getUpdates", 401, {"ok": False, "error_code": 401, "description": "Unauthorized"})
+    svc, rec = make(fake.url, answer=True)
+    assert wait_for(lambda: rec.problems)
+    assert wait_for(lambda: not svc._listener.is_alive(), timeout=2)
+    svc.stop()
+    assert rec.problems == [("sys.telegram_invalid_token", {})]
