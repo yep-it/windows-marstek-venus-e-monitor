@@ -136,3 +136,14 @@ def test_soc_and_reserve_are_explained_in_plain_words(qtbot):
     reserve_label = win.advanced.layout().labelForField(win.advanced.reserve)
     assert reserve_label.text() == "Reserve for “time left”"
     assert "12%" in reserve_label.toolTip()
+
+
+def test_inverter_efficiency_is_editable_and_explained(qtbot):
+    win = make(qtbot)
+    assert win.advanced.efficiency.value() == 93
+    label = win.advanced.layout().labelForField(win.advanced.efficiency)
+    assert label.text() == "Inverter efficiency" and "30 min" in label.toolTip()
+    win.advanced.efficiency.setValue(88)
+    data = settings_mod.defaults()
+    win.advanced.collect(data)
+    assert data["advanced"]["inverter_efficiency_pct"] == 88

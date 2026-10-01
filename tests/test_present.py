@@ -39,6 +39,12 @@ def test_tile():
     assert present.tile(state(error_key="sys.port_in_use")) == ("error", None)
 
 
+def test_tile_shows_the_outage():
+    assert present.tile(state(power_w=-85.0, grid_state="lost")) == ("outage", 87)
+    assert present.tile(state(power_w=-85.0, grid_state="ok")) == ("normal", 87)
+    assert present.tile(state(online=False, grid_state="lost")) == ("offline", None)
+
+
 def test_tooltip():
     tip = present.tooltip(state(grid_state="ok"), NOW)
     assert tip.startswith("Marstek Venus E")

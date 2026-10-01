@@ -61,7 +61,7 @@ def _kind(state: LiveState) -> str:
 
 
 def tile(state: LiveState) -> tuple[str, int | None]:
-    """Tray icon state: (kind, charge level %). kind: error | offline | unknown | charging | normal."""
+    """Tray icon state: (kind, charge level %). kind: error | offline | unknown | charging | outage | normal."""
     if state.error_key in ERROR_TILE_KEYS:
         return "error", None
     if not state.online:
@@ -69,7 +69,9 @@ def tile(state: LiveState) -> tuple[str, int | None]:
     s = state.snapshot
     if s is None or s.soc_pct is None:
         return "unknown", None
-    return ("charging" if direction(s.power_w) == CHARGING else "normal"), s.soc_pct
+    if direction(s.power_w) == CHARGING:
+        return "charging", s.soc_pct
+    return ("outage" if state.grid_state == "lost" else "normal"), s.soc_pct
 
 
 def state_line(state: LiveState) -> tuple[str, str]:

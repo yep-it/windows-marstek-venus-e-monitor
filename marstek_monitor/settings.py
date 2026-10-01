@@ -50,6 +50,7 @@ DEFAULTS: dict[str, Any] = {
     "telegram": {"enabled": False, "bot_token": "", "chat_id": "", "user_id": "", "answer_command": True},
     "advanced": {"power_sign": "minus_is_charging", "counter_unit": "Wh", "counters_verified": False,
                  "outage_detection": False, "rearm_pct": 2, "rearm_c": 2, "reserve_soc_pct": 12,
+                 "inverter_efficiency_pct": 93,
                  "samples_retention_days": 30, "log_level": "INFO", "record_raw": False},
 }
 
@@ -143,6 +144,7 @@ VALIDATORS: dict[str, Validator] = {
     "advanced.rearm_pct": int_range(0, 20),
     "advanced.rearm_c": int_range(0, 20),
     "advanced.reserve_soc_pct": int_range(0, 50),
+    "advanced.inverter_efficiency_pct": int_range(50, 100),
     "advanced.samples_retention_days": int_range(1, 365),
     "advanced.log_level": choice("DEBUG", "INFO", "WARNING", "ERROR"),
 }

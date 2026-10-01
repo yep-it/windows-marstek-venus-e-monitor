@@ -270,7 +270,13 @@ margin (default 2 % / 2 °C).
 **Time estimates:**
 
 - **Time to full** = (rated − stored) ÷ charging power.
-- **Backup time left** = (stored − reserve) ÷ load.
+- **Backup time left** = (stored − reserve) ÷ (load ÷ efficiency). The load is measured on the output side,
+  so the battery loses more than it delivers (inverter losses, the battery's own consumption).
+- **Efficiency:** measured while supplying — the average load compared with how fast the stored energy
+  actually falls, over at least 30 min (up to the last 2 h; restarts keep it via the stored samples).
+  The stored energy changes in steps of about 5 Wh, so the drop is taken between the moments it changes.
+  Until that is available, `advanced.inverter_efficiency_pct` is used (default 93 %).
+  First real reading 2026-10-01: ~100 W drain at ~83 W load over 12 min (too short to be reliable).
 - **Reserve** = `advanced.reserve_soc_pct` (default 12 %, matching the default DOD of 88 %).
 
 ### 6.8 Notifications (`notify/`)
@@ -320,14 +326,13 @@ JSON string tables `en` and `uk`, selected in Settings. They apply after pressin
 
 The mockups were reviewed in the brainstorming companion and live under `.superpowers/brainstorm/` (not committed).
 
-### 7.1 Tray icon (option **B**, chosen)
+### 7.1 Tray icon (battery; replaced option B after the owner saw it at 16 px)
 
-- A rounded **tile with the SOC number**, colored by state:
-  - green `#2ea043`: charging
-  - orange `#f0883e`: discharging
-  - grey `#8b949e`: idle
-- **Offline:** grey tile with a white ✕. **Unknown SOC:** `--`.
-- "100" uses a smaller font to fit 16 px. Rendered with `QPainter` for 16/24/32 px (DPI-aware).
+- An upright **battery filled from the bottom** with the charge level: green above 40 %, orange 20–40 %, red below.
+- **Charging:** a narrow yellow bolt in the middle, so the fill stays visible beside it.
+- **Grid outage** (running on the battery only): **red outline** instead of white; the fill stays.
+- **Offline:** grey outline with a ✕. **Error:** red outline with "!" and no fill.
+- Rendered with `QPainter` for 16–64 px (DPI-aware).
 - **Tooltip** (≤127 characters) always starts with the name, e.g.
   `Marstek Venus E · 87% · ↓ Charging 1450 W · Grid OK · 14:32`
 - **Left click:** open or focus the status window.

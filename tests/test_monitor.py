@@ -156,3 +156,34 @@ def test_counter_unit_change_rescales_history(cfg, storage):
     m.apply_settings(changed)
     reading = m.counter_readings()[0]
     assert (reading.in_wh, reading.out_wh) == (91960, 33290)
+
+
+def supplying(ts, stored, load=100.0):
+    s = Snapshot(ts=ts, responded=True, soc_pct=round(stored / 51.2), power_w=-load, stored_wh=stored,
+                 rated_wh=5120.0, ongrid_w=0.0, offgrid_w=load)
+    return PollResult(ts=ts, snapshot=s, online=True, device=DEVICE)
+
+
+def test_time_left_uses_the_efficiency_setting_until_the_drain_is_measured(cfg, storage):
+    m = Monitor(cfg, storage, clock=lambda: NOON)
+    m.handle(supplying(NOON, 5094.0))
+    assert cfg["advanced"]["inverter_efficiency_pct"] == 93
+    assert m.state.minutes_left == pytest.approx((5094 - 614.4) / (100 / 0.93) * 60)
+
+
+def test_time_left_uses_the_measured_drain(cfg, storage):
+    m = Monitor(cfg, storage, clock=lambda: NOON)
+    for i in range(61):  # an hour at 100 W on the socket while the battery loses 125 Wh/h
+        m.handle(supplying(NOON + i * 60, 5100.0 - 5 * (i * 125 // 60 // 5)))
+    last = m.state.snapshot
+    assert m.state.minutes_left == pytest.approx((last.stored_wh - 614.4) / (100 / 0.8) * 60, rel=0.05)
+
+
+def test_measured_drain_survives_a_restart(cfg, storage):
+    m = Monitor(cfg, storage, clock=lambda: NOON)
+    for i in range(61):
+        m.handle(supplying(NOON + i * 60, 5100.0 - 5 * (i * 125 // 60 // 5)))
+    expected = m.state.minutes_left
+    restarted = Monitor(cfg, storage, clock=lambda: NOON + 61 * 60)
+    restarted.handle(supplying(NOON + 61 * 60, m.state.snapshot.stored_wh))
+    assert restarted.state.minutes_left == pytest.approx(expected, rel=0.05)

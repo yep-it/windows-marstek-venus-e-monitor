@@ -14,7 +14,7 @@ from typing import Any, Callable
 
 from ..api.client import DeviceInfo
 from .energy import CounterReading
-from .estimates import minutes_left, minutes_to_full
+from .estimates import DrainTracker, minutes_left, minutes_to_full
 from .events import Event
 from .outage import OutageDetector
 from .poller import PollResult
@@ -60,7 +60,10 @@ class Monitor:
         self.detector = SessionDetector(settings["advanced"]["reserve_soc_pct"])
         self.outage = OutageDetector(settings["advanced"]["outage_detection"])
         self.rules = RulesEngine(settings)
+        self.drain = DrainTracker()
         self.apply_settings(settings)
+        for sample in self._db(lambda st: st.samples_since(clock() - DrainTracker.WINDOW_S), []):
+            self.drain.add(sample)  # an outage that was already being measured before a restart
         fw = self._db(lambda st: st.get_meta("fw_version"))
         self._fw_known: int | None = int(fw) if fw else None
         open_session = self._db(lambda st: st.open_session())
@@ -115,6 +118,7 @@ class Monitor:
                 events.append(self._system(now, r.error_key, r.error_params))
 
         if r.gap is not None:
+            self.drain.reset()
             self.detector.mark_gap()
             if self.detector.current is not None:
                 current = self.detector.current
@@ -135,6 +139,7 @@ class Monitor:
         grid_event = None
         if s is not None:
             self._db(lambda st: st.add_sample(s))
+            self.drain.add(s)
             if s.counter_in_wh is not None and s.counter_out_wh is not None:
                 self._db(lambda st: st.add_counter(s.ts, s.counter_in_wh, s.counter_out_wh, force=r.gap is not None))
             current = self.detector.current
@@ -161,7 +166,8 @@ class Monitor:
         live = self.state.snapshot if r.online else None
         reserve = self.settings["advanced"]["reserve_soc_pct"]
         self.state.minutes_to_full = minutes_to_full(live) if live else None
-        self.state.minutes_left = minutes_left(live, reserve) if live else None
+        efficiency = self.drain.efficiency() or self.settings["advanced"]["inverter_efficiency_pct"] / 100
+        self.state.minutes_left = minutes_left(live, reserve, efficiency) if live else None
 
         ctx = RuleContext(
             now=now, snapshot=s, online=r.online, grid_event=grid_event, grid_state=self.state.grid_state,

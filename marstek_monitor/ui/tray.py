@@ -1,4 +1,5 @@
-"""Tray icon: a battery that fills with the charge level, with a bolt while charging.
+"""Tray icon: a battery that fills with the charge level, with a bolt while charging
+and a red outline while the grid is lost (running on the battery only).
 
 (The owner replaced the spec's option B "number tile" after seeing it at 16 px.)
 The "M" tile is kept for the window and exe icon.
@@ -47,7 +48,7 @@ def render_tile(label: str | None, color: str, size: int) -> QPixmap:
 
 BOLT_COLOR = "#ffd33d"
 EDGE_COLOR = QColor(20, 20, 20, 210)
-OUTLINE = {"offline": "#9aa0a6", "error": COLORS["red"]}
+OUTLINE = {"offline": "#9aa0a6", "error": COLORS["red"], "outage": COLORS["red"]}
 # Lightning bolt in a unit box (x, y from the top-left corner).
 BOLT = ((0.62, 0.0), (0.12, 0.56), (0.46, 0.56), (0.34, 1.0), (0.88, 0.40), (0.54, 0.40), (0.74, 0.0))
 
@@ -73,7 +74,7 @@ def render_battery(kind: str, level: int | None, size: int) -> QPixmap:
     radius = size * 0.07
 
     # filling first, so the outline is drawn crisply over its edge
-    if level is not None and kind in ("normal", "charging"):
+    if level is not None and kind in ("normal", "charging", "outage"):
         inner = body.adjusted(stroke * 0.75, stroke * 0.75, -stroke * 0.75, -stroke * 0.75)
         height = max(1.0, inner.height() * max(0, min(100, level)) / 100)
         p.fillRect(QRectF(inner.left(), inner.bottom() - height, inner.width(), height), QColor(fill_color(level)))

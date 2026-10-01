@@ -1,6 +1,6 @@
 import pytest
 
-from marstek_monitor.core.estimates import direction, minutes_left, minutes_to_full
+from marstek_monitor.core.estimates import DrainTracker, direction, minutes_left, minutes_to_full
 from marstek_monitor.core.outage import OutageDetector
 from marstek_monitor.core.snapshot import Snapshot
 
@@ -27,6 +27,58 @@ def test_minutes_left_respects_reserve():
     assert minutes_left(snap(power=-1000, stored=2560), 12) == pytest.approx(116.736)
     assert minutes_left(snap(power=500, stored=2560), 12) is None
     assert minutes_left(snap(power=-1000, stored=300), 12) == 0.0
+
+
+def test_minutes_left_counts_inverter_losses():
+    # 99%: (5094 - 614.4) Wh usable; a 100 W load at 93% efficiency takes 107.5 W from the battery
+    assert minutes_left(snap(power=-100, stored=5094), 12, efficiency=0.93) == pytest.approx(4479.6 / (100 / 0.93) * 60)
+
+
+def supplying(ts, stored, load):
+    return Snapshot(ts=ts, responded=True, soc_pct=99, power_w=-load, stored_wh=stored, rated_wh=5120.0,
+                    ongrid_w=0.0, offgrid_w=load)
+
+
+def feed(tracker, minutes, start_stored=5114.0, drain_w=100.0, load=83.0, step=5.0, t0=0.0):
+    """One sample a minute; the stored energy is reported in steps of `step` Wh like the real device."""
+    for i in range(minutes + 1):
+        true_stored = start_stored - drain_w * i / 60
+        tracker.add(supplying(t0 + i * 60, start_stored - step * ((start_stored - true_stored) // step), load))
+
+
+def test_drain_tracker_needs_30_minutes_of_supplying():
+    tracker = DrainTracker()
+    feed(tracker, 20)
+    assert tracker.efficiency() is None
+
+
+def test_drain_tracker_measures_the_real_efficiency():
+    tracker = DrainTracker()
+    feed(tracker, 90, drain_w=100.0, load=83.0)
+    assert tracker.efficiency() == pytest.approx(0.83, abs=0.03)
+
+
+def test_drain_tracker_resets_when_supplying_stops():
+    tracker = DrainTracker()
+    feed(tracker, 90)
+    tracker.add(Snapshot(ts=91 * 60, responded=True, soc_pct=99, power_w=0.0, stored_wh=5000.0, rated_wh=5120.0))
+    assert tracker.efficiency() is None
+
+
+def test_drain_tracker_resets_after_a_gap():
+    tracker = DrainTracker()
+    feed(tracker, 90)
+    feed(tracker, 10, start_stored=4900.0, t0=91 * 60 + 3600)
+    assert tracker.efficiency() is None
+
+
+def test_drain_tracker_keeps_efficiency_in_a_sane_range():
+    tracker = DrainTracker()
+    feed(tracker, 90, drain_w=100.0, load=300.0)  # impossible: more out than taken from the battery
+    assert tracker.efficiency() == 1.0
+    tracker = DrainTracker()
+    feed(tracker, 90, drain_w=100.0, load=20.0)
+    assert tracker.efficiency() is None  # below the supplying threshold: nothing is tracked
 
 
 def test_disabled_detector_stays_unknown():

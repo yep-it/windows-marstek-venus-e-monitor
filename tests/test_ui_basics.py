@@ -124,3 +124,10 @@ def test_bolt_leaves_the_fill_visible_beside_it(light):
 def test_outline_is_thin_compared_to_the_fill(light):
     found = colors_in(render_battery("normal", 100, 32))
     assert found.get("#2ea043", 0) > 2 * found.get("#ffffff", 0)
+
+
+def test_outage_has_a_red_outline_and_keeps_the_fill(light):
+    image = render_battery("outage", 100, 32).toImage()
+    assert QColor(image.pixelColor(16, 12)).name() == "#2ea043"  # the charge level stays visible
+    found = colors_in(render_battery("outage", 100, 32))
+    assert found.get("#e5534b", 0) > 10 and found.get("#ffffff", 0) == 0  # red outline instead of white

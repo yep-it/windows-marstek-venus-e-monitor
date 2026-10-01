@@ -469,6 +469,7 @@ class AdvancedPage(QWidget):
         self.rearm_pct = _spin(0, 20, 2, " %")
         self.rearm_c = _spin(0, 20, 2, " °C")
         self.reserve = _spin(0, 50, 12, " %")
+        self.efficiency = _spin(50, 100, 93, " %")
         self.retention = _spin(1, 365, 30, tr("settings.days_suffix"))
         self.log_level = _combo([(x, x) for x in ("DEBUG", "INFO", "WARNING", "ERROR")], "INFO")
         self.record_raw = QCheckBox(tr("settings.record_raw"))
@@ -481,6 +482,7 @@ class AdvancedPage(QWidget):
         form.addRow(tr("settings.rearm_pct"), self.rearm_pct)
         form.addRow(tr("settings.rearm_c"), self.rearm_c)
         form.addRow(tr("settings.reserve"), self.reserve)
+        form.addRow(tr("settings.efficiency"), self.efficiency)
         form.addRow(tr("settings.retention"), self.retention)
         form.addRow(tr("settings.log_level"), self.log_level)
         form.addRow("", self.record_raw)
@@ -488,7 +490,7 @@ class AdvancedPage(QWidget):
         for field, key in ((self.power_sign, "help.power_sign"), (self.counter_unit, "help.counter_unit"),
                            (self.verified, "help.counters_verified"), (self.outage, "help.outage_detection"),
                            (self.rearm_pct, "help.rearm_pct"), (self.rearm_c, "help.rearm_c"),
-                           (self.reserve, "help.reserve"), (self.retention, "help.retention"),
+                           (self.reserve, "help.reserve"), (self.efficiency, "help.efficiency"), (self.retention, "help.retention"),
                            (self.log_level, "help.log_level"), (self.record_raw, "help.record_raw"),
                            (folder, "help.open_folder")):
             _help(form, field, key)
@@ -502,6 +504,7 @@ class AdvancedPage(QWidget):
         self.rearm_pct.setValue(a["rearm_pct"])
         self.rearm_c.setValue(a["rearm_c"])
         self.reserve.setValue(a["reserve_soc_pct"])
+        self.efficiency.setValue(a["inverter_efficiency_pct"])
         self.retention.setValue(a["samples_retention_days"])
         _select(self.log_level, a["log_level"])
         self.record_raw.setChecked(a["record_raw"])
@@ -511,6 +514,7 @@ class AdvancedPage(QWidget):
             power_sign=self.power_sign.currentData(), counter_unit=self.counter_unit.currentData(),
             counters_verified=self.verified.isChecked(), outage_detection=self.outage.isChecked(),
             rearm_pct=self.rearm_pct.value(), rearm_c=self.rearm_c.value(), reserve_soc_pct=self.reserve.value(),
+            inverter_efficiency_pct=self.efficiency.value(),
             samples_retention_days=self.retention.value(), log_level=self.log_level.currentData(),
             record_raw=self.record_raw.isChecked(),
         )
