@@ -21,7 +21,8 @@ def english():
 
 
 def state(**kw):
-    snap_kw = {k: kw.pop(k) for k in list(kw) if k in ("soc_pct", "power_w", "charge_allowed", "discharge_allowed", "temp_c")}
+    snap_kw = {k: kw.pop(k) for k in list(kw) if k in ("soc_pct", "power_w", "charge_allowed", "discharge_allowed", "temp_c",
+                                                         "ongrid_w", "offgrid_w")}
     s = Snapshot(ts=NOW, responded=True, stored_wh=4450.0, rated_wh=5120.0, ip="192.168.1.20", rssi_dbm=-49,
                  fw_version=144, **{"soc_pct": 87, "power_w": 1450.0, "charge_allowed": True,
                                     "discharge_allowed": True, "temp_c": 24.0, **snap_kw})
@@ -46,7 +47,7 @@ def test_tile_shows_the_outage():
 
 
 def test_tooltip():
-    tip = present.tooltip(state(grid_state="ok"), NOW)
+    tip = present.tooltip(state(grid_state="ok", ongrid_w=-1450.0), NOW)
     assert tip.startswith("Marstek Venus E")
     assert "87%" in tip and "1 450 W" in tip and "Grid OK" in tip
     assert len(tip) <= present.TOOLTIP_MAX
@@ -70,10 +71,20 @@ def test_state_and_energy_lines():
 
 
 def test_grid_line():
-    assert present.grid_line(state(grid_state="ok"), NOW) == ("● Grid connected", "charging")
+    assert present.grid_line(state(grid_state="ok", ongrid_w=-1450.0), NOW) == ("● Grid connected", "charging")
     text, color = present.grid_line(state(grid_state="lost", grid_since=NOW - 3600), NOW)
     assert "1 h 0 min" in text and color == "discharging"
     assert present.grid_line(state(), NOW)[0] == "Grid state unknown"
+
+
+def test_grid_line_cant_tell_while_no_power_flows():
+    # The grid cable unplugged, nothing on the backup socket: the readings look like idle.
+    idle = state(grid_state="ok", power_w=0.0, ongrid_w=0.0, offgrid_w=0.0)
+    assert present.grid_line(idle, NOW) == ("● Grid: unknown (battery idle, nothing on backup)", "idle")
+    assert "Grid OK" not in present.tooltip(idle, NOW)
+    passthrough = state(grid_state="ok", power_w=0.0, ongrid_w=0.0, offgrid_w=98.0)
+    assert present.grid_line(passthrough, NOW)[0] == "● Grid connected"
+    assert present.grid_line(state(grid_state="ok", online=False, ongrid_w=-1450.0), NOW)[1] == "idle"
 
 
 def test_banners():
@@ -153,7 +164,7 @@ def test_delivery_text_and_icon():
 
 
 def test_telegram_status():
-    text = present.telegram_status(state(grid_state="ok"), NOW)
+    text = present.telegram_status(state(grid_state="ok", ongrid_w=-1450.0), NOW)
     lines = text.splitlines()
     assert lines[0] == "🔋 Marstek Venus E — 87% (4.45 of 5.12 kWh)"
     assert lines[1] == "↓ Charging · 1 450 W · full in ≈ 25 min"

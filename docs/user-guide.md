@@ -83,7 +83,9 @@ The window remembers its size and position.
 - **Banners** at the top warn about important states: a grid outage, the battery not
   responding, charging or discharging blocked by the battery, or a temperature outside the safe range.
 - **Grid line**: `● Grid connected` or `⚡ Grid outage since 18:15 (4 h 28 min)`. It is shown only
-  when outage detection is on.
+  when outage detection is on. While the battery is idle and nothing is plugged into the backup
+  socket, the readings look the same with and without the grid, so the line shows
+  `● Grid: unknown (battery idle, nothing on backup)`.
 - **Charge level** in big numbers, and what the battery is doing right now: `↓ Charging`,
   `↑ Supplying` or `Idle`, with the power.
 - **Time estimate**: while charging, `full in ≈ …`; while supplying power, `≈ … left at this load`
@@ -315,7 +317,8 @@ The app talks only to the battery on your network and, if you set it up, to Tele
 
 **"Battery not responding" or "Waiting for data…"**
 
-- Check that the battery is on and connected to Wi-Fi, and that the PC is on the same network.
+- Check that the battery is on and connected to your home network (Wi-Fi or cable), and that the
+  PC is on the same network.
 - Check that the Local API is turned on in the Marstek app.
 - Allow the app in Windows Firewall for private networks. If you clicked "Cancel" at the first
   start, open *Windows Security → Firewall & network protection → Allow an app through firewall*

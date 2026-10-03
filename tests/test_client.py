@@ -9,10 +9,12 @@ from marstek_monitor.api.client import (
     ApiError,
     ApiTimeout,
     ClientStopped,
+    DeviceInfo,
     ForbiddenMethodError,
     MarstekClient,
     PortInUseError,
     broadcast_addresses,
+    clean_ip,
 )
 from tests.fakes.fake_battery import FakeBattery
 from tests.fakes.net import free_udp_port
@@ -82,6 +84,30 @@ def test_discover_finds_device(client):
     assert found[0].ble_mac == "0123456789ab"
     assert found[0].ip == "127.0.0.1"
     assert found[0].ver == 144
+
+
+def test_discover_uses_the_sender_address_not_the_reported_one(client, battery):
+    # The real battery (VenusE 3.0, fw 144, on a LAN cable) reported its address with zero-padded parts.
+    battery.results["Marstek.GetDevice"]["ip"] = "192.168.01.020"
+    found = client.discover(["127.0.0.1"], wait=0.5)
+    assert found[0].ip == "127.0.0.1"
+
+
+def test_device_info_drops_leading_zeros_from_the_reported_ip():
+    info = DeviceInfo.from_result({"ip": "192.168.01.020"}, fallback_ip="10.0.0.1")
+    assert info.ip == "192.168.1.20"
+
+
+@pytest.mark.parametrize("value, expected", [
+    ("192.168.01.020", "192.168.1.20"),
+    (" 192.168.1.20 ", "192.168.1.20"),
+    ("010.001.000.007", "10.1.0.7"),
+    ("", ""),
+    ("battery.local", "battery.local"),
+    ("192.168.1.256", "192.168.1.256"),
+])
+def test_clean_ip(value, expected):
+    assert clean_ip(value) == expected
 
 
 def test_port_in_use_is_reported(battery):

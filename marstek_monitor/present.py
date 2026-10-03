@@ -8,7 +8,7 @@ from .core.estimates import CHARGING, DISCHARGING, direction
 from .core.events import Event
 from .core.monitor import LiveState
 from .core.sessions import FLAG_ENDED_WHILE_OFF, FLAG_STARTED_BEFORE_APP, Session
-from .core.snapshot import Snapshot
+from .core.snapshot import BACKUP_MIN_W, GRID_IDLE_W, Snapshot
 from .i18n import fmt_duration, fmt_energy, fmt_kw, fmt_kwh, fmt_power, tr
 
 DEVICE_NAME = "Marstek Venus E"
@@ -108,9 +108,18 @@ def time_left_line(state: LiveState) -> str:
     return tr("est.left", time=fmt_duration(state.minutes_left * 60))
 
 
+def grid_seen(state: LiveState) -> bool:
+    """No outage detected AND the readings show the grid: power exchanged with it, or a backup load
+    the battery isn't supplying. With no power flowing at all, an outage looks exactly like idle."""
+    s = state.snapshot if state.online else None
+    if state.grid_state != "ok" or s is None:
+        return False
+    return (s.ongrid_w is not None and abs(s.ongrid_w) > GRID_IDLE_W) or (s.offgrid_w or 0.0) > BACKUP_MIN_W
+
+
 def grid_line(state: LiveState, now: float) -> tuple[str, str]:
     if state.grid_state == "ok":
-        return tr("grid.ok"), "charging"
+        return (tr("grid.ok"), "charging") if grid_seen(state) else (tr("grid.cant_tell"), "idle")
     if state.grid_state == "lost":
         since = state.grid_since or now
         return tr("grid.lost", since=hm(since), duration=fmt_duration(now - since)), "discharging"
@@ -188,7 +197,7 @@ def tooltip(state: LiveState, now: float) -> str:
         if state.snapshot.soc_pct is not None:
             parts.append(f"{state.snapshot.soc_pct}%")
         parts.append(state_line(state)[0])
-        if state.grid_state == "ok":
+        if grid_seen(state):
             parts.append(tr("tip.grid_ok"))
         elif state.grid_state == "lost":
             parts.append(tr("tip.on_battery"))

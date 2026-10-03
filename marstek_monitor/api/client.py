@@ -12,7 +12,7 @@ import logging
 import socket
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Callable
 
 log = logging.getLogger(__name__)
@@ -68,8 +68,20 @@ class DeviceInfo:
             ver=int(ver) if isinstance(ver, (int, float)) and not isinstance(ver, bool) else None,
             ble_mac=str(result.get("ble_mac", "")),
             wifi_mac=str(result.get("wifi_mac", "")),
-            ip=str(result.get("ip") or fallback_ip),
+            ip=clean_ip(str(result.get("ip") or "")) or fallback_ip,
         )
+
+
+def clean_ip(value: str) -> str:
+    """Drop leading zeros ("192.168.01.020" -> "192.168.1.20"); Windows can't send to such an address.
+
+    Anything that isn't four numbers 0-255 is returned unchanged (only stripped).
+    """
+    value = value.strip()
+    parts = value.split(".")
+    if len(parts) == 4 and all(p.isdigit() and int(p) <= 255 for p in parts):
+        return ".".join(str(int(p)) for p in parts)
+    return value
 
 
 def local_ip_for(target_ip: str) -> str:
@@ -179,7 +191,9 @@ class MarstekClient:
                 if msg.get("id") != rid or not isinstance(msg.get("result"), dict):
                     continue
                 self._record("Marstek.GetDevice", msg)
-                info = DeviceInfo.from_result(msg["result"], fallback_ip=addr[0])
+                # The address the reply came from, not the one it reports: on a LAN cable
+                # the battery reported its address with zero-padded parts ("192.168.01.020").
+                info = replace(DeviceInfo.from_result(msg["result"], fallback_ip=addr[0]), ip=addr[0])
                 found[info.ble_mac or info.ip] = info
         return list(found.values())
 

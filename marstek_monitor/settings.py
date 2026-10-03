@@ -13,6 +13,8 @@ import time
 from pathlib import Path
 from typing import Any, Callable
 
+from .api.client import clean_ip
+
 log = logging.getLogger(__name__)
 
 SCHEMA = 2
@@ -121,7 +123,7 @@ def same_number(value: Any) -> Any:
 
 VALIDATORS: dict[str, Validator] = {
     "device.ble_mac": text,
-    "device.ip": text,
+    "device.ip": lambda value: clean_ip(text(value)),
     "device.port": int_range(1, 65535),
     "device.local_port": optional_port,
     "general.language": choice("en", "uk"),

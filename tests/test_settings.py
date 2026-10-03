@@ -40,6 +40,11 @@ def test_wrong_types_fall_back_to_defaults():
     assert data["quiet_hours"]["from"] == "23:00"
 
 
+def test_battery_ip_loses_leading_zeros():
+    data = settings.validate({"device": {"ip": "192.168.01.020"}})
+    assert data["device"]["ip"] == "192.168.1.20"
+
+
 def test_numbers_are_clamped():
     data = settings.validate({"general": {"poll_seconds": 10}, "appearance": {"font_scale": 5}})
     assert data["general"]["poll_seconds"] == settings.MIN_POLL_SECONDS
