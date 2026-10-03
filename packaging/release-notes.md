@@ -12,4 +12,7 @@
 To update, exit the app from the tray menu and replace the folder. Settings and history stay in
 `%APPDATA%\MarstekMonitor`.
 
+The user guide for this version is in the `docs` folder next to the exe: `user-guide.md` (English)
+and `user-guide.uk.md` (Ukrainian).
+
 The app only reads from the battery. It never changes any battery setting.

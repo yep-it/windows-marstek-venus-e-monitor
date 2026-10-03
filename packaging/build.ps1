@@ -25,6 +25,13 @@ Copy-Item packaging\THIRD-PARTY-NOTICES.txt $out
 Copy-Item packaging\licenses\*.txt "$out\licenses"
 $pythonHome = & .\.venv\Scripts\python -c "import sys; print(sys.base_prefix)"
 Copy-Item (Join-Path $pythonHome "LICENSE.txt") "$out\licenses\Python-LICENSE.txt"
+# the user guides as they were for this version, with their screenshots (links stay relative)
+if (Test-Path "$out\docs") { Remove-Item "$out\docs" -Recurse -Force }  # else images\ nests into images\images
+New-Item -ItemType Directory -Force "$out\docs" | Out-Null
+Copy-Item docs\user-guide.md, docs\user-guide.uk.md "$out\docs"
+Copy-Item docs\images "$out\docs" -Recurse -Force
+$required += @("$out\docs\user-guide.md", "$out\docs\user-guide.uk.md", "$out\docs\images\en\status-now.png",
+               "$out\docs\images\uk\status-now.png", "$out\docs\images\tray-normal.png")
 $required += @("$out\LICENSE.txt", "$out\THIRD-PARTY-NOTICES.txt", "$out\licenses\LGPL-3.0.txt",
                "$out\licenses\GPL-3.0.txt", "$out\licenses\Python-LICENSE.txt")
 

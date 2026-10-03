@@ -34,7 +34,7 @@ Marstek Monitor — невелика програма для Windows, яка п�
 1. Завантажте `MarstekMonitor-<версія>-win64.zip` зі сторінки
    [Releases](https://github.com/yep-it/windows-marstek-venus-e-monitor/releases).
 2. Розпакуйте його будь-куди, наприклад у `C:\Programs`. Тримайте всю папку `MarstekMonitor`
-   разом: exe потрібні файли поруч із ним.
+   разом: exe потрібні файли поруч із ним. У папці `docs` є цей посібник для цієї версії.
 3. Запустіть `MarstekMonitor.exe`. Exe не має цифрового підпису, тому Windows SmartScreen може
    показати «Windows захистив ваш ПК». Натисніть **Докладніше → Усе одно запустити**.
 4. Коли брандмауер Windows запитає, чи дозволити програмі обмін даними в **приватних мережах**,

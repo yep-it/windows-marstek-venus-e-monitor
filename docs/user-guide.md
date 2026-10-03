@@ -34,7 +34,7 @@ The app **only reads** from the battery. It never changes any battery setting.
 1. Download `MarstekMonitor-<version>-win64.zip` from the
    [Releases](https://github.com/yep-it/windows-marstek-venus-e-monitor/releases) page.
 2. Unzip it anywhere, for example to `C:\Programs`. Keep the whole `MarstekMonitor` folder together:
-   the exe needs the files next to it.
+   the exe needs the files next to it. The `docs` folder in it holds this guide for that version.
 3. Run `MarstekMonitor.exe`. The exe is not code-signed, so Windows SmartScreen may say
    "Windows protected your PC". Click **More info → Run anyway**.
 4. When Windows Firewall asks whether the app may communicate on **private networks**, allow it.
